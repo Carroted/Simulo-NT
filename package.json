@@ -1,4 +1,7 @@
 {
+  "name": "simulo-nt",
+  "displayName": "Simulo NT",
+  "version": "0.9.0-alpha",
   "dependencies": {
     "@dimforge/rapier2d": "^0.11.2",
     "@mdi/svg": "^7.2.96",
