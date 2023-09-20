@@ -1,5 +1,5 @@
-const RAPIER = await import("@dimforge/rapier2d");
-import type Rapier from "@dimforge/rapier2d";
+import RAPIER from "@dimforge/rapier2d-compat";
+import type Rapier from "@dimforge/rapier2d-compat";
 
 import SimuloObjectData from "../SimuloObjectData";
 
@@ -40,11 +40,12 @@ interface SimuloPhysicsStepInfo {
     ms: number;
 }
 class SimuloPhysicsServerRapier {
-    world: Rapier.World;
+    world: Rapier.World | null = null;
     //graphics: Graphics;
     //mouse: { x: number; y: number };
     listeners: { [key: string]: Function[] } = {};
     colliders: Rapier.Collider[] = [];
+    changedContents: { [id: string]: ShapeContentData } = {};
 
     private emit(event: string, data: any) {
         if (this.listeners[event]) {
@@ -63,6 +64,52 @@ class SimuloPhysicsServerRapier {
         if (this.listeners[event]) {
             this.listeners[event] = this.listeners[event].filter((l) => l != listener);
         }
+    }
+
+    /** random hex number like 0xffffff */
+    randomColor(hueMin: number, hueMax: number, saturationMin: number, saturationMax: number, valueMin: number, valueMax: number): number {
+        let hue = hueMin + Math.random() * (hueMax - hueMin);
+        let saturation = saturationMin + Math.random() * (saturationMax - saturationMin);
+        let value = valueMin + Math.random() * (valueMax - valueMin);
+        return this.hsvToHex(hue, saturation, value);
+    }
+    // params are 0 to 1
+    hsvToHex(h: number, s: number, v: number): number {
+        let r, g, b;
+        let i = Math.floor(h * 6);
+        let f = h * 6 - i;
+        let p = v * (1 - s);
+        let q = v * (1 - f * s);
+        let t = v * (1 - (1 - f) * s);
+        switch (i % 6) {
+            case 0:
+                (r = v), (g = t), (b = p);
+                break;
+            case 1:
+                (r = q), (g = v), (b = p);
+                break;
+            case 2:
+                (r = p), (g = v), (b = t);
+                break;
+            case 3:
+                (r = p), (g = q), (b = v);
+                break;
+            case 4:
+                (r = t), (g = p), (b = v);
+                break;
+            case 5:
+                (r = v), (g = p), (b = q);
+                break;
+        }
+        r = r ?? 0.5;
+        g = g ?? 0.5;
+        b = b ?? 0.5;
+        return parseInt(
+            "0x" +
+            Math.floor(r * 255).toString(16) +
+            Math.floor(g * 255).toString(16) +
+            Math.floor(b * 255).toString(16)
+        );
     }
 
     getShapeContent(collider: Rapier.Collider): ShapeContentData | null {
@@ -86,12 +133,13 @@ class SimuloPhysicsServerRapier {
                 let halfExtents = cuboid.halfExtents;
                 let width = halfExtents.x * 2;
                 let height = halfExtents.y * 2;
-                return {
+                let rect: Rectangle = {
                     ...baseShape,
                     type: "rectangle",
                     width: width,
                     height: height,
-                } as Rectangle;
+                };
+                return rect;
                 break;
             case RAPIER.ShapeType.Ball:
                 let ball = shape as Rapier.Ball;
@@ -140,122 +188,65 @@ class SimuloPhysicsServerRapier {
         return transforms;
     }
 
-
-    constructor() {
+    async init() {
+        await RAPIER.init();
         let gravity = new RAPIER.Vector2(0.0, -9.81);
         let world = new RAPIER.World(gravity);
         this.world = world;
         //this.graphics = new Graphics();
 
-        /*
-         * Ground
-         */
+
+
+
         // Create Ground.
-        let groundSize = 30.0;
+        let groundSize = 40.0;
         let grounds = [
-            { x: 0.0, y: 0.0, hx: groundSize, hy: 1.2 },
-            { x: -groundSize, y: groundSize, hx: 1.2, hy: groundSize },
-            { x: groundSize, y: groundSize, hx: 1.2, hy: groundSize },
+            { x: 0.0, y: 0.0, hx: groundSize, hy: 0.1 },
+            { x: -groundSize, y: groundSize, hx: 0.1, hy: groundSize },
+            { x: groundSize, y: groundSize, hx: 0.1, hy: groundSize },
         ];
 
-        grounds.forEach((ground, i) => {
-            let data: SimuloObjectData = {
-                color: 0xa1acfa,
-                border: 0x000000,
-                borderScaleWithZoom: true,
+        grounds.forEach((ground) => {
+            this.addRectangle(ground.hx, ground.hy, {
+                id: "ground" + Math.random().toString(),
+                color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+                border: 0xffffff,
+                name: 'joe',
+                sound: 'test',
                 borderWidth: 1,
-                zDepth: i,
-                id: i.toString(),
-                name: "Unnamed Object",
-                sound: null,
+                borderScaleWithZoom: true,
                 image: null,
-            }
-            this.addRectangle(ground.hx, ground.hy, data, [ground.x, ground.y], true);
+                zDepth: 0,
+            }, [ground.x, ground.y], true);
         });
 
-        let bodyDesc = RAPIER.RigidBodyDesc.dynamic();
-        bodyDesc = bodyDesc.setTranslation(
-            0,
-            0
-        );
-        bodyDesc.setUserData({
-            color: 0xff3030,
-            border: 0xffffff,
-        });
-        let body = this.world.createRigidBody(bodyDesc);
-        let colliderDesc = RAPIER.ColliderDesc.cuboid(25.0, 5.0);
-        let coll = this.world.createCollider(colliderDesc, body);
-        //this.graphics.addCollider(RAPIER, this.world, coll);
+        // Dynamic cubes.
+        let num = 20;
+        let numy = 50;
+        let rad = 1.0;
 
-        // revolute to world
-        let anchor = new RAPIER.Vector2(0.0, 0.0);
-        let jointDesc = RAPIER.JointData.revolute(
-            new RAPIER.Vector2(0.0, 0.0),
-            anchor,
-        );
-
-        // ok now we need a ground body like in box2d, its a static body with mass 10000 (mass 0 bodies break the sim)
-        let groundBodyDesc = RAPIER.RigidBodyDesc.fixed();
-        let groundBody = this.world.createRigidBody(groundBodyDesc);
-
-        let JointData = RAPIER.JointData.revolute(anchor, anchor);
-        world.createImpulseJoint(JointData, groundBody, body, true);
-
-        /*
-         * Create the convex polygons
-         */
-        let num = 14;
-        let scale = 4.0;
-
-        let shift = scale;
-        let centerx = (shift * num) / 2.0;
+        let shift = rad * 2.0 + rad;
+        let centerx = shift * (num / 2);
         let centery = shift / 2.0;
 
+        let i, j;
 
-        /*for (i = 0; i < num; ++i) {
-            for (j = 0; j < num * 2; ++j) {
+        for (j = 0; j < numy; ++j) {
+            for (i = 0; i < num; ++i) {
                 let x = i * shift - centerx;
-                let y = j * shift * 2.0 + centery + 2.0;
+                let y = j * shift + centery + 3.0;
 
-                let bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y);
-                let body = world.createRigidBody(bodyDesc);
-
-                let points = [];
-                for (k = 0; k < 10; ++k) {
-                    points.push(rng() * scale, rng() * scale);
-                }
-                let colliderDesc = RAPIER.ColliderDesc.convexHull(
-                    new Float32Array(points),
-                );
-                world.createCollider(colliderDesc, body);
-            }
-        }*/
-
-        for (let i = 0; i < num; ++i) {
-            for (let j = 0; j < num * 2; ++j) {
-                let x = i * shift - centerx;
-                let y = j * shift * 2.0 + centery + 2.0;
-
-                let points: [x: number, y: number][] = [];
-                for (let k = 0; k < 10; ++k) {
-                    points.push([Math.random() * scale, Math.random() * scale]);
-                }
-
-                // random hex color with sat 100
-                let color = Math.floor(Math.random() * 0xffffff);
-                let data: SimuloObjectData = {
-                    color: color,
-                    border: 0x000000,
-                    borderScaleWithZoom: true,
+                this.addRectangle(rad, rad, {
+                    id: "box" + i.toString() + "-" + j.toString(),
+                    color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+                    border: 0xffffff,
+                    name: 'joe',
+                    sound: 'test',
                     borderWidth: 1,
-                    zDepth: i,
-                    id: i.toString(),
-                    name: "Unnamed Object",
-                    sound: null,
+                    borderScaleWithZoom: true,
                     image: null,
-                }
-
-                this.addPolygon(points, data, [x, y]);
+                    zDepth: 0,
+                }, [x, y], false);
             }
         }
 
@@ -269,8 +260,14 @@ class SimuloPhysicsServerRapier {
         this.graphics.viewport.moveCenter(-100.0, -300.0);*/
     }
 
+    constructor() {
+
+    }
+
     /** multiple gon */
     addPolygon(points: [x: number, y: number][], data: SimuloObjectData, position: [x: number, y: number], isStatic: boolean = false) {
+        if (!this.world) { throw new Error('init world first'); }
+
         let bodyDesc = isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
         bodyDesc = bodyDesc.setTranslation(
             position[0],
@@ -285,9 +282,15 @@ class SimuloPhysicsServerRapier {
         );
         let coll = this.world.createCollider(colliderDesc!, body);
         //this.graphics.addCollider(RAPIER, this.world, coll);
+        this.colliders.push(coll);
+        let content = this.getShapeContent(coll);
+        if (content) {
+            this.changedContents[data.id] = content;
+        }
     }
 
     addRectangle(width: number, height: number, data: SimuloObjectData, position: [x: number, y: number], isStatic: boolean) {
+        if (!this.world) { throw new Error('init world first'); }
         let bodyDesc = isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
         bodyDesc = bodyDesc.setTranslation(
             position[0],
@@ -298,9 +301,16 @@ class SimuloPhysicsServerRapier {
         let colliderDesc = RAPIER.ColliderDesc.cuboid(width, height);
         let coll = this.world.createCollider(colliderDesc!, body);
         //this.graphics.addCollider(RAPIER, this.world, coll);
+        this.colliders.push(coll);
+        let content = this.getShapeContent(coll);
+        if (content) {
+            this.changedContents[data.id] = content;
+        }
     }
 
     step(): SimuloPhysicsStepInfo {
+        if (!this.world) { throw new Error('init world first'); }
+
         this.world.maxVelocityIterations = 4;
         this.world.maxVelocityFrictionIterations =
             4 * 2;
@@ -308,10 +318,13 @@ class SimuloPhysicsServerRapier {
         let before = new Date().getTime();
         this.world.step();
 
+        let changed = this.changedContents;
+        this.changedContents = {};
+
         return {
             // still very temporary, this isnt a delta but we will make it one soon
             delta: {
-                shapeContent: this.getShapeContents(),
+                shapeContent: changed,
                 shapeTransforms: this.getShapeTransforms(),
             },
             ms: new Date().getTime() - before,

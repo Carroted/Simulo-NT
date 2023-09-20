@@ -2,6 +2,7 @@ import SimuloClientPlugin from "../SimuloClientPlugin";
 
 export default class SimuloClientController {
     plugins: SimuloClientPlugin[] = [];
+
     /** Register a plugin to have event handlers called on it.
       * 
       * Note that the order of plugins is important, as they are called in order. */
@@ -29,7 +30,7 @@ export default class SimuloClientController {
     }
 
     listeners: { [event: string]: ((data: any) => void)[] } = {};
-    /** Never use this in plugins. */
+    /** Never use this in plugins, you get the data from `handleIncomingEvent` instead. */
     on(event: string, callback: (data: any) => void) {
         if (!this.listeners[event]) this.listeners[event] = [];
         this.listeners[event].push(callback);
@@ -42,8 +43,15 @@ export default class SimuloClientController {
 
     emit(event: string, data: any) {
         this.handleOutgoingEvent(event, data);
-        for (let callback of this.listeners[event]) {
-            callback(data);
+        if (this.listeners[event]) {
+            for (let callback of this.listeners[event]) {
+                callback(data);
+            }
+        }
+        if (this.listeners['data']) {
+            for (let callback of this.listeners['data']) {
+                callback({ event, data });
+            }
         }
     }
 }

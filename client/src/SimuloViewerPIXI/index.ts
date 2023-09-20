@@ -7,6 +7,15 @@ export default class SimuloViewerPIXI {
     renderer: PIXI.Renderer;
     scene: PIXI.Container;
     viewport: Viewport;
+    listeners: { [event: string]: ((data: any) => void)[] } = {};
+    on(event: string, callback: (data: any) => void) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(callback);
+    }
+    off(event: string, callback: (data: any) => void) {
+        if (!this.listeners[event]) return;
+        this.listeners[event].splice(this.listeners[event].indexOf(callback), 1);
+    }
 
     constructor() {
         // High pixel Ratio make the rendering extremely slow, so we cap it.
@@ -28,14 +37,21 @@ export default class SimuloViewerPIXI {
         this.viewport = new Viewport({
             screenWidth: window.innerWidth,
             screenHeight: window.innerHeight,
-            worldWidth: 1000,
-            worldHeight: 1000,
             //interaction: this.renderer.plugins.interaction,
             events: this.renderer.events
         });
 
         this.scene.addChild(this.viewport as any);
         this.viewport.drag().pinch().wheel().decelerate();
+        this.viewport.on("pointermove", (e) => {
+            if (this.listeners["pointermove"]) this.listeners["pointermove"].forEach((callback) => callback(e));
+        });
+        this.viewport.on("pointerdown", (e) => {
+            if (this.listeners["pointerdown"]) this.listeners["pointerdown"].forEach((callback) => callback(e));
+        });
+        this.viewport.on("pointerup", (e) => {
+            if (this.listeners["pointerup"]) this.listeners["pointerup"].forEach((callback) => callback(e));
+        });
 
         let me = this;
 
@@ -51,15 +67,24 @@ export default class SimuloViewerPIXI {
         document.body.oncontextmenu = onContextMenu;
 
         window.addEventListener("resize", onWindowResize, false);
+
+        this.lookAt({
+            target: { x: -10.0, y: -30.0 },
+            zoom: 7.0,
+        });
     }
 
     update(stepInfo: SimuloPhysicsStepInfo) {
+        for (let key in stepInfo.delta.shapeContent) {
+            let content = stepInfo.delta.shapeContent[key];
+            this.addShape(content);
+        }
         this.updatePositions(stepInfo.delta.shapeTransforms);
     }
 
-    render(transformData: { [id: string]: ShapeTransformData }, debugRender: Boolean) {
-        this.updatePositions(transformData);
+    render() {
         this.renderer.render(this.scene);
+
     }
 
     lookAt(pos: { zoom: number; target: { x: number; y: number } }) {
@@ -105,10 +130,18 @@ export default class SimuloViewerPIXI {
         switch (content.type) {
             case "rectangle":
                 let rectangle = content as Rectangle;
-                gfx.scale.x = rectangle.width;
+                /*gfx.scale.x = rectangle.width;
                 gfx.scale.y = rectangle.height;
-                gfx.beginFill(rectangle.color);
+                gfx.beginFill(rectangle.color, 0xff);
                 gfx.drawRect(-1, 1, 2, -2);
+                gfx.endFill();*/
+                // polygon instead
+                gfx.beginFill(rectangle.color);
+                gfx.moveTo(-rectangle.width / 2, rectangle.height / 2);
+                gfx.lineTo(rectangle.width / 2, rectangle.height / 2);
+                gfx.lineTo(rectangle.width / 2, -rectangle.height / 2);
+                gfx.lineTo(-rectangle.width / 2, -rectangle.height / 2);
+                gfx.lineTo(-rectangle.width / 2, rectangle.height / 2);
                 gfx.endFill();
                 break;
             case "circle":
@@ -136,6 +169,8 @@ export default class SimuloViewerPIXI {
                 console.error("Unknown shape type: " + content.type);
                 break;
         }
+
+        console.log('registered shape')
 
         this.coll2gfx.set(content.id, gfx);
         this.viewport.addChild(gfx);

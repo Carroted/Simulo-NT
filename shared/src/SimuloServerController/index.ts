@@ -57,8 +57,15 @@ export default class SimuloServerController {
 
     emit(event: string, data: any, id: string | null) {
         this.handleOutgoingEvent(event, data, id);
-        for (let callback of this.listeners[event]) {
-            callback(data);
+        if (this.listeners[event]) {
+            for (let callback of this.listeners[event]) {
+                callback(data);
+            }
+        }
+        if (this.listeners['data']) {
+            for (let callback of this.listeners['data']) {
+                callback({ event, data });
+            }
         }
     }
 

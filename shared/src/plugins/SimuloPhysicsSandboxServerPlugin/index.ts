@@ -30,6 +30,14 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
     destroy(): void { }
     handleIncomingEvent(event: string, data: any, id: string): void {
         // here we handle incoming events from clients
+        if (!this.players[id]) {
+            this.players[id] = {
+                x: 0,
+                y: 0,
+                color: 0xffffff,
+                id
+            }
+        }
 
         // player event handlers
         if (this.players[id]) {
@@ -43,6 +51,18 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
             // player_down fires when primary input is pressed, such as mouse left click
             if (event === 'player_down') {
                 // i forgoy
+                console.log('down received')
+                this.physicsPlugin.physicsServer.addRectangle(1, 1, {
+                    id: "bo2e2x" + Math.random(),
+                    color: 0xffffff,
+                    border: 0xffffff,
+                    name: 'joe',
+                    sound: 'test',
+                    borderWidth: 1,
+                    borderScaleWithZoom: true,
+                    image: null,
+                    zDepth: 0,
+                }, [data.x, data.y], false);
             }
 
             // player_up fires when primary input is released, such as mouse left click

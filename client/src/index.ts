@@ -4,8 +4,10 @@ import SimuloPhysicsSandboxClientPlugin from "./plugins/client/SimuloPhysicsSand
 import SimuloServerController from "../../shared/src/SimuloServerController";
 import SimuloClientController from "./SimuloClientController";
 
+console.log('test before doing anything');
 let server = new SimuloServerController();
 let physicsPlugin = new SimuloPhysicsPlugin(server);
+await physicsPlugin.init();
 let physicsSandboxServerPlugin = new SimuloPhysicsSandboxServerPlugin(server, physicsPlugin);
 
 server.addPlugin(physicsPlugin);
@@ -21,9 +23,17 @@ let physicsSandboxClientPlugin = new SimuloPhysicsSandboxClientPlugin(client);
 client.addPlugin(physicsSandboxClientPlugin);
 
 // loopback, so simple that we don't need a plugin for this
-server.on('data', (data: any) => {
+server.on('physics_step', (data: any) => {
+    //console.log('Client got data')
     // any emitted server data is instantly handled on client
-    client.handleIncomingEvent(data.event, data.data);
+    client.handleIncomingEvent("physics_step", data);
+});
+client.on('data', (data: { event: string, data: any }) => {
+    //console.log('Server got data')
+    // any emitted client data is instantly handled on server
+    console.log('emitting event')
+    server.handleIncomingEvent(data.event, data.data, "local");
 });
 
+console.log('Starting...')
 server.startLoop();

@@ -20,6 +20,22 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     constructor(controller: SimuloClientController) {
         this.controller = controller;
         this.viewer = new SimuloViewerPIXI();
+        this.viewer.on('pointerdown', (e) => {
+            // at clientx and y, emit a player_down event
+            console.log('down at ' + e.globalX + ', ' + e.globalY)
+            let global = this.viewer.viewport.toWorld(e.globalX, e.globalY);
+            this.controller.emit('player_down', { x: global.x, y: -global.y });
+        });
+        this.viewer.on('pointermove', (e) => {
+            // at clientx and y, emit a player_move event
+            let global = this.viewer.viewport.toWorld(e.globalX, e.globalY);
+            this.controller.emit('player_move', { x: global.x, y: -global.y });
+        });
+        let renderLoop = () => {
+            this.viewer.render();
+            requestAnimationFrame(renderLoop);
+        }
+        requestAnimationFrame(renderLoop);
     }
 
     destroy(): void { }
@@ -27,6 +43,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         if (event === 'physics_step') {
             // we get the physics step info from the server
             let stepInfo = data as SimuloPhysicsStepInfo;
+            //console.log(stepInfo.delta.shapeTransforms);
             // we can use this to update the viewer
             this.viewer.update(stepInfo);
         }

@@ -72,7 +72,7 @@ const steps = [
         }
 
         let info = await Bun.build({
-            target: "bun",
+            target: "browser",
             entrypoints: ['./client/src/index.ts'],
             outdir: './dist/client/src',
             sourcemap: 'external'
