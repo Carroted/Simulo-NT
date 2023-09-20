@@ -331,6 +331,16 @@ class SimuloPhysicsServerRapier {
         };
     }
 
+    getObjectAtPoint(x: number, y: number): Rapier.Collider | null {
+        if (!this.world) { throw new Error('init world first'); }
+        let point = new RAPIER.Vector2(x, y);
+        let proj = this.world.projectPoint(point, true);
+        if (proj != null && proj.isInside) {
+            return proj.collider;
+        }
+        return null;
+    }
+
     getShapeContents(): { [id: string]: ShapeContentData } {
         let contents: { [id: string]: ShapeContentData } = {};
         this.colliders.forEach((collider) => {

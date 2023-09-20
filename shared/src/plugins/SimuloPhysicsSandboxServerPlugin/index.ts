@@ -52,7 +52,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
             if (event === 'player_down') {
                 // i forgoy
                 console.log('down received')
-                this.physicsPlugin.physicsServer.addRectangle(1, 1, {
+                /*this.physicsPlugin.physicsServer.addRectangle(1, 1, {
                     id: "bo2e2x" + Math.random(),
                     color: 0xffffff,
                     border: 0xffffff,
@@ -62,7 +62,14 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                     borderScaleWithZoom: true,
                     image: null,
                     zDepth: 0,
-                }, [data.x, data.y], false);
+                }, [data.x, data.y], false);*/
+                let c = this.physicsPlugin.physicsServer.getObjectAtPoint(data.x, data.y);
+                if (c) {
+                    // @ts-ignore
+                    c.parent().userData.color = 0xff0000;
+                    // @ts-ignore
+                    this.physicsPlugin.physicsServer.changedContents[c.parent().userData.id] = this.physicsPlugin.physicsServer.getShapeContent(c);
+                }
             }
 
             // player_up fires when primary input is released, such as mouse left click
