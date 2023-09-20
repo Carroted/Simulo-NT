@@ -1,6 +1,7 @@
 import type SimuloServerPlugin from "../../../../shared/src/SimuloServerPlugin";
 import type SimuloServerController from "../../../../shared/src/SimuloServerController";
 
+/** Browser WebRTC network server for Simulo */
 export default class SimuloBrowserNetworkServerPlugin implements SimuloServerPlugin {
     name = "Simulo Browser Network Server Plugin";
     description = "WebRTC network server that runs in the browser.";

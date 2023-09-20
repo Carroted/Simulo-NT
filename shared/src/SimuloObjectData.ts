@@ -1,4 +1,6 @@
+/** User data on Rapier objects */
 interface SimuloObjectData {
+    /** We use custom ID instead of Rapier handle for a cleaner scripting API as well as for containers to work */
     id: string;
     /**
      * Path to a sound file for collisions. Relative to /assets/sounds/

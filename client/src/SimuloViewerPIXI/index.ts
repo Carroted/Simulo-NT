@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
 import { Viewport } from "pixi-viewport";
-import { Circle, Polygon, Rectangle, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerRapier";
+import type { Circle, Polygon, Rectangle, ShapeContentData, ShapeTransformData, SimuloPhysicsStepInfo } from "../../../shared/src/SimuloPhysicsServerRapier";
 
 export default class SimuloViewerPIXI {
     coll2gfx: Map<string, PIXI.Graphics>;
@@ -51,6 +51,10 @@ export default class SimuloViewerPIXI {
         document.body.oncontextmenu = onContextMenu;
 
         window.addEventListener("resize", onWindowResize, false);
+    }
+
+    update(stepInfo: SimuloPhysicsStepInfo) {
+        this.updatePositions(stepInfo.delta.shapeTransforms);
     }
 
     render(transformData: { [id: string]: ShapeTransformData }, debugRender: Boolean) {

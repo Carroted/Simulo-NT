@@ -32,6 +32,13 @@ interface ShapeTransformData {
     angle: number;
 }
 
+interface SimuloPhysicsStepInfo {
+    delta: {
+        shapeContent: ShapeContentData[];
+        shapeTransforms: { [id: string]: ShapeTransformData };
+    };
+    ms: number;
+}
 class SimuloPhysicsServerRapier {
     world: Rapier.World;
     //graphics: Graphics;
@@ -293,13 +300,7 @@ class SimuloPhysicsServerRapier {
         //this.graphics.addCollider(RAPIER, this.world, coll);
     }
 
-    step(): {
-        delta: {
-            shapeContent: ShapeContentData[];
-            shapeTransforms: { [id: string]: ShapeTransformData };
-        };
-        ms: number;
-    } {
+    step(): SimuloPhysicsStepInfo {
         this.world.maxVelocityIterations = 4;
         this.world.maxVelocityFrictionIterations =
             4 * 2;
@@ -319,4 +320,4 @@ class SimuloPhysicsServerRapier {
 }
 
 export default SimuloPhysicsServerRapier;
-export type { ShapeContentData, Polygon, Rectangle, Circle, ShapeTransformData };
+export type { ShapeContentData, Polygon, Rectangle, Circle, ShapeTransformData, SimuloPhysicsStepInfo };

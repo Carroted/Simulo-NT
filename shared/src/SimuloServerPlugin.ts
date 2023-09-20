@@ -15,11 +15,13 @@ export default interface SimuloServerPlugin extends SimuloItemDetails {
      * For instance, a `NetworkServer` plugin would call `serverController.handleIncomingEvent` when it receives a message from a client. Other plugins can then handle that event with this method.
      * 
      * Should never be used by transport plugins. */
-    handleIncomingEvent(event: string, data: any): void;
+    handleIncomingEvent(event: string, data: any, id: string): void;
     /** Called when `emit` is called on `ServerController`.
      * 
      * For instance, plugins can call `serverController.emit` to send a message to a client, and a `NetworkServer` plugin would handle that message with this method.
      * 
-     * Should only be used for transport plugins and logging plugins. */
-    handleOutgoingEvent(event: string, data: any): void;
+     * Should only be used for transport plugins and logging plugins.
+     * 
+     * ID should always be present when sending to a specific client, and null when sending to all clients. */
+    handleOutgoingEvent(event: string, data: any, id: string | null): void;
 }

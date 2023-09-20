@@ -2,6 +2,9 @@ import SimuloClientPlugin from "../SimuloClientPlugin";
 
 export default class SimuloClientController {
     plugins: SimuloClientPlugin[] = [];
+    /** Register a plugin to have event handlers called on it.
+      * 
+      * Note that the order of plugins is important, as they are called in order. */
     addPlugin(plugin: SimuloClientPlugin) {
         this.plugins.push(plugin);
     }
