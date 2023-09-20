@@ -34,7 +34,7 @@ interface ShapeTransformData {
 
 interface SimuloPhysicsStepInfo {
     delta: {
-        shapeContent: ShapeContentData[];
+        shapeContent: { [id: string]: ShapeContentData };
         shapeTransforms: { [id: string]: ShapeTransformData };
     };
     ms: number;
@@ -311,11 +311,22 @@ class SimuloPhysicsServerRapier {
         return {
             // still very temporary, this isnt a delta but we will make it one soon
             delta: {
-                shapeContent: this.colliders.map((collider) => { return this.getShapeContent(collider) }).filter((x) => x != null) as ShapeContentData[],
+                shapeContent: this.getShapeContents(),
                 shapeTransforms: this.getShapeTransforms(),
             },
             ms: new Date().getTime() - before,
         };
+    }
+
+    getShapeContents(): { [id: string]: ShapeContentData } {
+        let contents: { [id: string]: ShapeContentData } = {};
+        this.colliders.forEach((collider) => {
+            let content = this.getShapeContent(collider);
+            if (content) {
+                contents[content.id] = content;
+            }
+        });
+        return contents;
     }
 }
 
