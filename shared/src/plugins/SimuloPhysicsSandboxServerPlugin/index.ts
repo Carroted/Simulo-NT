@@ -82,7 +82,6 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 let target = this.physicsPlugin.physicsServer.getObjectAtPoint(data.x, data.y);
                 this.physicsPlugin.physicsServer.groundBody!.setTranslation({ x: data.x, y: data.y }, true);
                 if (target) {
-                    console.log('####\nhit target, adding spring')
                     this.physicsPlugin.physicsServer.springs.push({
                         bodyA: target.parent()!,
                         bodyB: this.physicsPlugin.physicsServer.groundBody!,
@@ -93,9 +92,6 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                         targetLength: 0,
                         damping: 1
                     })
-                }
-                else {
-                    console.log('####\nno target')
                 }
                 this.players[id].down = true;
 
