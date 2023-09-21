@@ -141,7 +141,7 @@ export default class SimuloViewerPIXI {
             if (keyboardPan.right) {
                 x = 1;
             }
-            if (x !== 0 && y !== 0) {
+            if (x !== 0 || y !== 0) {
                 x *= speed;
                 y *= speed;
                 this.viewport.moveCenter(this.viewport.center.x + x, this.viewport.center.y + y);
