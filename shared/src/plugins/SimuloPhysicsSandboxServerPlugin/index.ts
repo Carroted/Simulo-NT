@@ -58,7 +58,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 }*/
 
                 if (this.players[id].down) {
-                    this.physicsPlugin.physicsServer.addRectangle(1, 1, {
+                    /*this.physicsPlugin.physicsServer.addRectangle(1, 1, {
                         id: "bo2e2x" + Math.random(),
                         color: 0xffffff,
                         border: 0xffffff,
@@ -68,7 +68,11 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                         borderScaleWithZoom: true,
                         image: null,
                         zDepth: 0,
-                    }, [data.x, data.y], false);
+                    }, [data.x, data.y], false);*/
+
+                    // update ground
+                    this.physicsPlugin.physicsServer.groundBody!.setTranslation({ x: data.x, y: data.y }, true);
+                    console.log('####\nmoved ground')
                 }
             }
 
@@ -76,17 +80,24 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
             if (event === 'player_down') {
                 // i forgoy
                 console.log('down received')
-                this.physicsPlugin.physicsServer.addRectangle(1, 1, {
-                    id: "bo2e2x" + Math.random(),
-                    color: 0xffffff,
-                    border: 0xffffff,
-                    name: 'joe',
-                    sound: 'test',
-                    borderWidth: 1,
-                    borderScaleWithZoom: true,
-                    image: null,
-                    zDepth: 0,
-                }, [data.x, data.y], false);
+                let target = this.physicsPlugin.physicsServer.getObjectAtPoint(data.x, data.y);
+                this.physicsPlugin.physicsServer.groundBody!.setTranslation({ x: data.x, y: data.y }, true);
+                if (target) {
+                    console.log('####\nhit target, adding spring')
+                    this.physicsPlugin.physicsServer.springs.push({
+                        bodyA: target.parent()!,
+                        bodyB: this.physicsPlugin.physicsServer.groundBody!,
+                        stiffness: 0.1,
+                        // since these are unused and this is prototype code ill delete, using random vars
+                        localAnchorA: "69 lmao" as any,
+                        localAnchorB: "real, bro" as any,
+                        targetLength: 1,
+                        damping: 0.1
+                    })
+                }
+                else {
+                    console.log('####\nno target')
+                }
                 this.players[id].down = true;
 
             }
@@ -94,6 +105,9 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
             // player_up fires when primary input is released, such as mouse left click
             if (event === 'player_up') {
                 // i forgoy
+                // remove all spring
+                this.physicsPlugin.physicsServer.springs = [];
+                console.log('####\nup received')
                 this.players[id].down = false;
             }
         }

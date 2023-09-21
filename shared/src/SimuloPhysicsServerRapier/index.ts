@@ -209,10 +209,12 @@ class SimuloPhysicsServerRapier {
 
     springs: SimuloSpring[] = [];
 
+    groundBody: Rapier.RigidBody | null = null;
+
     async init() {
         await RAPIER.init();
 
-        let gravity = new RAPIER.Vector2(0.0, 0.0);
+        let gravity = new RAPIER.Vector2(0.0, -9.81);
         let world = new RAPIER.World(gravity);
         this.world = world;
 
@@ -221,8 +223,20 @@ class SimuloPhysicsServerRapier {
             4 * 2;
         //this.graphics = new Graphics();
 
+        let groundPlane = this.addRectangle(1000, 500, {
+            id: "ground",
+            color: 0xa1acfa,
+            border: 0xffffff,
+            name: 'joe',
+            sound: 'test',
+            borderWidth: 1,
+            borderScaleWithZoom: true,
+            image: null,
+            zDepth: 0,
+        }, [0, -510], true);
 
-
+        let groundBodyDesc = RAPIER.RigidBodyDesc.fixed();
+        this.groundBody = this.world.createRigidBody(groundBodyDesc);
 
         /*// Create Ground.
         let groundSize = 40.0;
@@ -286,7 +300,7 @@ class SimuloPhysicsServerRapier {
             borderScaleWithZoom: true,
             image: null,
             zDepth: 0,
-        }, [-3, 5], false);
+        }, [-3, 10], false);
         let bodyB = this.addRectangle(1, 1, {
             id: "springboxB",
             color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
@@ -297,18 +311,18 @@ class SimuloPhysicsServerRapier {
             borderScaleWithZoom: true,
             image: null,
             zDepth: 0,
-        }, [5, 5], true);
+        }, [5, 5], false);
 
-        this.springs.push({
+        /*this.springs.push({
             bodyA: bodyA.parent()!,
             bodyB: bodyB.parent()!,
             stiffness: 0.1,
             // since these are unused and this is prototype code ill delete, using random vars
             localAnchorA: "69 lmao" as any,
             localAnchorB: "real, bro" as any,
-            targetLength: 5,
-            damping: 0
-        })
+            targetLength: 1,
+            damping: 0.1
+        })*/
     }
 
     /** multiple gon */
@@ -349,7 +363,7 @@ class SimuloPhysicsServerRapier {
         bodyDesc.setUserData(data);
         let body = this.world.createRigidBody(bodyDesc);
         // no collide
-        let colliderDesc = RAPIER.ColliderDesc.cuboid(width, height).setRestitution(0).setFriction(0).setMass(1)
+        let colliderDesc = RAPIER.ColliderDesc.cuboid(width, height).setRestitution(0).setFriction(0).setMass(1)//.setCollisionGroups(0)
         let coll = this.world.createCollider(colliderDesc!, body);
         //this.graphics.addCollider(RAPIER, this.world, coll);
         this.colliders.push(coll);
@@ -419,8 +433,14 @@ class SimuloPhysicsServerRapier {
         return new RAPIER.Vector2(v.x / len, v.y / len);
     }
 
-    sub(a: Rapier.Vector2, b: Rapier.Vector2): Rapier.Vector2 {
-        return new RAPIER.Vector2(a.x - b.x, a.y - b.y);
+    sub(a: Rapier.Vector2, ...others: Rapier.Vector2[]): Rapier.Vector2 {
+        let x = a.x;
+        let y = a.y;
+        others.forEach((other) => {
+            x -= other.x;
+            y -= other.y;
+        });
+        return new RAPIER.Vector2(x, y);
     }
 
     magnitude(v: Rapier.Vector2): number {
@@ -439,16 +459,22 @@ class SimuloPhysicsServerRapier {
         return `(${v.x}, ${v.y})`;
     }
 
-    add(a: Rapier.Vector2, b: Rapier.Vector2): Rapier.Vector2 {
-        return new RAPIER.Vector2(a.x + b.x, a.y + b.y);
+    add(a: Rapier.Vector2, ...others: Rapier.Vector2[]): Rapier.Vector2 {
+        let x = a.x;
+        let y = a.y;
+        others.forEach((other) => {
+            x += other.x;
+            y += other.y;
+        });
+        return new RAPIER.Vector2(x, y);
     }
 
     dot(a: Rapier.Vector2, b: Rapier.Vector2): number {
         return a.x * b.x + a.y * b.y;
     }
 
-    crossZV(s: number, v: Rapier.Vector2): Rapier.Vector2 {
-        return new RAPIER.Vector2(-s * v.y, s * v.x);
+    cross(a: Rapier.Vector2, b: Rapier.Vector2): Rapier.Vector2 {
+        return new RAPIER.Vector2(a.x * b.y, -a.y * b.x);
     }
 
     combineCoefficients(dt: number, stiffness: number, damping: number): [erp_inv_dt: number, no_one_knows: number, cfm_gain: number] {
@@ -459,20 +485,35 @@ class SimuloPhysicsServerRapier {
     }
 
     applySpringForce(spring: SimuloSpring) {
-        // spring has 2 rapier rigidbodies etc, we will addForce(
-
-        // distance between spring.bodyA.translation() and bodyB's
         const pointAWorld = spring.bodyA.translation();
         const pointBWorld = spring.bodyB.translation();
+        const velA = spring.bodyA.linvel();
+        const velB = spring.bodyB.linvel();
+        const springVector = this.sub(pointBWorld, pointAWorld);
+        const distance = this.magnitude(springVector);
+        const direction = this.normalize(springVector);
+        const forceMagnitude = spring.stiffness * (distance - spring.targetLength);
 
-        // solve distance constraint with Gauss-Siedel method
-        const currentLength = this.distance(pointAWorld, pointBWorld);
-        const difference = (currentLength - spring.targetLength) / currentLength;
-        const springForce = this.multiply(this.sub(pointAWorld, pointBWorld), difference * spring.stiffness);
+        const forceOnA = this.multiply(direction, forceMagnitude);
+        const forceOnB = this.multiply(direction, -forceMagnitude);
 
-        // add spring force to both bodies
-        spring.bodyA.addForce(this.multiply(springForce, -1), true);
-    }
+        spring.bodyA.applyImpulse(forceOnA, true);
+        spring.bodyB.applyImpulse(forceOnB, true);
+    }/*
+    applySpringForce(spring: SimuloSpring, deltaTime: number = 1 / 60) {
+        const pointAWorld = spring.bodyA.translation();
+        const pointBWorld = spring.bodyB.translation();
+        const springVector = this.sub(pointBWorld, pointAWorld);
+        const distance = this.magnitude(springVector);
+        const direction = this.normalize(springVector);
+        const forceMagnitude = -spring.stiffness * (distance - spring.targetLength);
+
+        const forceOnA = this.multiply(direction, forceMagnitude);
+        const forceOnB = this.multiply(direction, -forceMagnitude);
+
+        spring.bodyA.addForce(forceOnA, true);
+        spring.bodyB.addForce(forceOnB, true);
+    }*/
 }
 
 export default SimuloPhysicsServerRapier;
