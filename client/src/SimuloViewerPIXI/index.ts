@@ -45,9 +45,11 @@ export default class SimuloViewerPIXI {
         this.viewport.drag({
             mouseButtons: "middle-right",
         }).pinch().wheel().decelerate();
+        let latestMousePos = { x: 0, y: 0 };
         this.viewport.on("pointermove", (e) => {
             if (this.listeners["pointermove"]) {
                 let point = this.viewport.toWorld(e.globalX, e.globalY);
+                latestMousePos = { x: e.globalX, y: e.globalY };
                 this.listeners["pointermove"].forEach((callback) => callback({
                     event: e,
                     point: { x: point.x, y: -point.y },
@@ -57,6 +59,7 @@ export default class SimuloViewerPIXI {
         this.viewport.on("pointerdown", (e) => {
             if (this.listeners["pointerdown"]) {
                 let point = this.viewport.toWorld(e.globalX, e.globalY);
+                latestMousePos = { x: e.globalX, y: e.globalY };
                 this.listeners["pointerdown"].forEach((callback) => callback({
                     event: e,
                     point: { x: point.x, y: -point.y },
@@ -66,12 +69,85 @@ export default class SimuloViewerPIXI {
         this.viewport.on("pointerup", (e) => {
             if (this.listeners["pointerup"]) {
                 let point = this.viewport.toWorld(e.globalX, e.globalY);
+                latestMousePos = { x: e.globalX, y: e.globalY };
                 this.listeners["pointerup"].forEach((callback) => callback({
                     event: e,
                     point: { x: point.x, y: -point.y },
                 }));
             }
         });
+
+        let keyboardPan = {
+            up: false,
+            left: false,
+            down: false,
+            right: false
+        };
+
+        // hjkl moves it, with native DOM listeners
+        document.addEventListener('keydown', (e: KeyboardEvent) => {
+            console.log('key is', e.key)
+            if (e.key === 'h') {
+                keyboardPan.left = true;
+            }
+            if (e.key === 'j') {
+                keyboardPan.down = true;
+            }
+            if (e.key === 'k') {
+                keyboardPan.up = true;
+            }
+            if (e.key === 'l') {
+                keyboardPan.right = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e: KeyboardEvent) => {
+            console.log('key is', e.key)
+            if (e.key === 'h') {
+                keyboardPan.left = false;
+            }
+            if (e.key === 'j') {
+                keyboardPan.down = false;
+            }
+            if (e.key === 'k') {
+                keyboardPan.up = false;
+            }
+            if (e.key === 'l') {
+                keyboardPan.right = false;
+            }
+        });
+
+        const pointerMoved = () => {
+            let point = this.viewport.toWorld(latestMousePos.x, latestMousePos.y);
+            this.listeners["pointermove"].forEach((callback) => callback({
+                event: {},
+                point: { x: point.x, y: -point.y },
+            }));
+        }
+
+        setInterval(() => {
+            let x = 0;
+            let y = 0;
+            let speed = 0.3;
+            if (keyboardPan.left) {
+                x = -1;
+            }
+            if (keyboardPan.down) {
+                y = 1;
+            }
+            if (keyboardPan.up) {
+                y = -1;
+            }
+            if (keyboardPan.right) {
+                x = 1;
+            }
+            if (x !== 0 && y !== 0) {
+                x *= speed;
+                y *= speed;
+                this.viewport.moveCenter(this.viewport.center.x + x, this.viewport.center.y + y);
+            }
+            pointerMoved();
+        }, 10);
 
         let me = this;
 
@@ -111,7 +187,7 @@ export default class SimuloViewerPIXI {
         this.springGFXs = []
         stepInfo.springs.forEach((spring) => {
             let gfx = new PIXI.Graphics();
-            gfx.lineStyle(0.1, '#ffffff')
+            gfx.lineStyle(3 / this.viewport.scale.y, '#ffffff')
                 .moveTo(spring.pointA.x, -spring.pointA.y)
                 .lineTo(spring.pointB.x, -spring.pointB.y);
             this.springGFXs.push(gfx)
