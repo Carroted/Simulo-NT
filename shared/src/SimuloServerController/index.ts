@@ -1,9 +1,11 @@
 import SimuloServerPlugin from "../SimuloServerPlugin";
 
 /** Simulo "clienthost" or dedicated game server, NOT a web server. */
+
 export default class SimuloServerController {
     /** Measured in frames per second, NOT in format like `1000 / 60` */
-    frameRate: number = 60;
+    frameRate: number;
+
     plugins: SimuloServerPlugin[] = [];
     /** Register a plugin to have event handlers called on it.
      * 
@@ -69,7 +71,7 @@ export default class SimuloServerController {
         }
     }
 
-    loopInterval: any = null;
+    private loopInterval: any = null;
 
     startLoop() {
         this.runStarts();
@@ -84,5 +86,9 @@ export default class SimuloServerController {
             clearInterval(this.loopInterval);
             this.loopInterval = null;
         }
+    }
+
+    constructor(frameRate: number = 60) {
+        this.frameRate = frameRate;
     }
 }

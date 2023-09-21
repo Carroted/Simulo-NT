@@ -1,5 +1,9 @@
 import SimuloClientPlugin from "../SimuloClientPlugin";
 
+/** Generic client controller for Simulo.
+ * 
+ * If you're making a game with Simulo engine, you shouldn't need to modify this, you can simply make your own plugins. */
+
 export default class SimuloClientController {
     plugins: SimuloClientPlugin[] = [];
 

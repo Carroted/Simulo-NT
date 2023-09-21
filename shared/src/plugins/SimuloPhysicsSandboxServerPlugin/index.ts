@@ -48,31 +48,12 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 this.players[id].x = data.x ?? 0;
                 this.players[id].y = data.y ?? 0;
 
-                /*
-                let c = this.physicsPlugin.physicsServer.getObjectAtPoint(data.x, data.y);
-                if (c) {
-                    // @ts-ignore
-                    c.parent().userData.color = Math.round(Math.random() * 0xffffff);
-                    // @ts-ignore
-                    this.physicsPlugin.physicsServer.changedContents[c.parent().userData.id] = this.physicsPlugin.physicsServer.getShapeContent(c);
-                }*/
-
                 if (this.players[id].down) {
-                    /*this.physicsPlugin.physicsServer.addRectangle(1, 1, {
-                        id: "bo2e2x" + Math.random(),
-                        color: 0xffffff,
-                        border: 0xffffff,
-                        name: 'joe',
-                        sound: 'test',
-                        borderWidth: 1,
-                        borderScaleWithZoom: true,
-                        image: null,
-                        zDepth: 0,
-                    }, [data.x, data.y], false);*/
-
-                    // update ground
-                    this.physicsPlugin.physicsServer.groundBody!.setTranslation({ x: data.x, y: data.y }, true);
-                    console.log('####\nmoved ground')
+                    this.physicsPlugin.physicsServer.springs.forEach(spring => {
+                        spring.getBodyBPosition = () => {
+                            return { x: data.x, y: data.y };
+                        };
+                    });
                 }
             }
 
@@ -80,29 +61,43 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
             if (event === 'player_down') {
                 console.log('down received')
                 let target = this.physicsPlugin.physicsServer.getObjectAtPoint(data.x, data.y);
-                this.physicsPlugin.physicsServer.groundBody!.setTranslation({ x: data.x, y: data.y }, true);
                 if (target) {
-                    this.physicsPlugin.physicsServer.springs.push({
-                        bodyA: target.parent()!,
-                        bodyB: this.physicsPlugin.physicsServer.groundBody!,
-                        stiffness: 1,
-                        // since these are unused and this is prototype code ill delete, using random vars
-                        localAnchorA: this.physicsPlugin.physicsServer.getLocalPoint(target.parent()!, { x: data.x, y: data.y }),
-                        localAnchorB: { x: 0, y: 0 },
-                        targetLength: 0,
-                        damping: 1
-                    })
+                    let bodyANullable = target.parent();
+                    if (bodyANullable !== null) {
+                        let bodyA = bodyANullable;
+                        this.physicsPlugin.physicsServer.springs.push({
+                            // positions
+                            getBodyAPosition: () => { return bodyA.translation() },
+                            getBodyBPosition: () => { return { x: data.x, y: data.y }; },
+
+                            // rotations
+                            getBodyARotation: () => { return bodyA.rotation() },
+                            getBodyBRotation: () => { return 0; },
+
+                            // velocities
+                            getBodyAVelocity: () => { return bodyA.linvel() },
+                            getBodyBVelocity: () => { return { x: 0, y: 0 }; },
+
+                            // impulses
+                            applyBodyAImpulse: (impulse, worldPoint) => {
+                                bodyA.applyImpulseAtPoint(impulse, worldPoint, true);
+                            },
+                            applyBodyBImpulse: (impulse, worldPoint) => { },
+
+                            stiffness: 1,
+                            localAnchorA: this.physicsPlugin.physicsServer.getLocalPoint(bodyA.translation(), bodyA.rotation(), { x: data.x, y: data.y }),
+                            localAnchorB: { x: 0, y: 0 },
+                            targetLength: 0,
+                            damping: 1
+                        });
+                    }
                 }
                 this.players[id].down = true;
-
             }
 
             // player_up fires when primary input is released, such as mouse left click
             if (event === 'player_up') {
-                // i forgoy
-                // remove all spring
                 this.physicsPlugin.physicsServer.springs = [];
-                console.log('####\nup received')
                 this.players[id].down = false;
             }
         }

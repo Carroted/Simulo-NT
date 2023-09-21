@@ -2,11 +2,30 @@ import * as PIXI from "pixi.js";
 import { Viewport } from "pixi-viewport";
 import type { Circle, Polygon, Rectangle, ShapeContentData, ShapeTransformData, SimuloPhysicsStepInfo } from "../../../shared/src/SimuloPhysicsServerRapier";
 
+PIXI.curves.adaptive = false;
+
+/** Renderer in PIXI.js for Simulo. You can add shapes with `addShape`, and update their positions with `update`. */
+
 export default class SimuloViewerPIXI {
     coll2gfx: Map<string, PIXI.Graphics>;
     renderer: PIXI.Renderer;
     scene: PIXI.Container;
     viewport: Viewport;
+    canvas: HTMLCanvasElement;
+
+    /** Can pan the camera with keys like HJKL, or, for mere mortals, arrow keys */
+    panInputs: {
+        up: boolean;
+        left: boolean;
+        down: boolean;
+        right: boolean;
+    } = {
+            up: false,
+            left: false,
+            down: false,
+            right: false,
+        };
+
     listeners: { [event: string]: ((data: any) => void)[] } = {};
     on(event: string, callback: (data: any) => void) {
         if (!this.listeners[event]) this.listeners[event] = [];
@@ -17,128 +36,115 @@ export default class SimuloViewerPIXI {
         this.listeners[event].splice(this.listeners[event].indexOf(callback), 1);
     }
 
+    /** Previous mouse position from `e.globalX` and `Y`, not world space */
+    previousMousePos: { x: number, y: number } = { x: 0, y: 0 };
+
+    updateMouse(eventName: string, position?: { x: number, y: number }, e?: MouseEvent) {
+        if (position) {
+            this.previousMousePos = { x: position.x, y: position.y }; // clone, not reference
+            if (this.listeners[eventName]) {
+                let point = this.viewport.toWorld(position.x, position.y);
+                this.listeners[eventName].forEach((callback) => callback({
+                    event: e ?? null,
+                    point: { x: point.x, y: -point.y },
+                }));
+            }
+        }
+        else {
+            if (this.listeners[eventName]) {
+                // use previous mouse position
+                let point = this.viewport.toWorld(this.previousMousePos.x, this.previousMousePos.y);
+                this.listeners[eventName].forEach((callback) => callback({
+                    event: e ?? null,
+                    point: { x: point.x, y: -point.y },
+                }));
+            }
+        }
+    }
+
     constructor() {
-        // High pixel Ratio make the rendering extremely slow, so we cap it.
-        // const pixelRatio = window.devicePixelRatio ? Math.min(window.devicePixelRatio, 1.5) : 1;
+        // high pixel ratio makes the rendering extremely slow, so we cap it
+        const pixelRatio = window.devicePixelRatio ? Math.min(window.devicePixelRatio, 1.5) : 1;
 
         this.coll2gfx = new Map();
         this.renderer = new PIXI.Renderer({
             backgroundAlpha: 0,
             antialias: true,
-            // resolution: pixelRatio,
+            resolution: pixelRatio,
             width: window.innerWidth,
             height: window.innerHeight,
         });
 
         this.scene = new PIXI.Container();
+
         // add to document
-        document.body.appendChild(this.renderer.view as HTMLCanvasElement);
+        this.canvas = document.body.appendChild(this.renderer.view as HTMLCanvasElement);
 
         this.viewport = new Viewport({
             screenWidth: window.innerWidth,
             screenHeight: window.innerHeight,
-            //interaction: this.renderer.plugins.interaction,
-            events: this.renderer.events
+            events: this.renderer.events,
         });
 
         this.scene.addChild(this.viewport as any);
         this.viewport.drag({
-            mouseButtons: "middle-right",
+            mouseButtons: "middle-right", // left click is used for tools
         }).pinch().wheel().decelerate();
-        let latestMousePos = { x: 0, y: 0 };
+
         this.viewport.on("pointermove", (e) => {
-            if (this.listeners["pointermove"]) {
-                let point = this.viewport.toWorld(e.globalX, e.globalY);
-                latestMousePos = { x: e.globalX, y: e.globalY };
-                this.listeners["pointermove"].forEach((callback) => callback({
-                    event: e,
-                    point: { x: point.x, y: -point.y },
-                }));
-            }
+            this.updateMouse("pointermove", { x: e.globalX, y: e.globalY }, e);
         });
         this.viewport.on("pointerdown", (e) => {
-            if (this.listeners["pointerdown"]) {
-                let point = this.viewport.toWorld(e.globalX, e.globalY);
-                latestMousePos = { x: e.globalX, y: e.globalY };
-                this.listeners["pointerdown"].forEach((callback) => callback({
-                    event: e,
-                    point: { x: point.x, y: -point.y },
-                }));
-            }
+            this.updateMouse("pointerdown", { x: e.globalX, y: e.globalY }, e);
         });
         this.viewport.on("pointerup", (e) => {
-            if (this.listeners["pointerup"]) {
-                let point = this.viewport.toWorld(e.globalX, e.globalY);
-                latestMousePos = { x: e.globalX, y: e.globalY };
-                this.listeners["pointerup"].forEach((callback) => callback({
-                    event: e,
-                    point: { x: point.x, y: -point.y },
-                }));
-            }
+            this.updateMouse("pointerup", { x: e.globalX, y: e.globalY }, e);
         });
 
-        let keyboardPan = {
-            up: false,
-            left: false,
-            down: false,
-            right: false
-        };
-
-        // hjkl moves it, with native DOM listeners
-        document.addEventListener('keydown', (e: KeyboardEvent) => {
-            console.log('key is', e.key)
+        this.canvas.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'h') {
-                keyboardPan.left = true;
+                this.panInputs.left = true;
             }
             if (e.key === 'j') {
-                keyboardPan.down = true;
+                this.panInputs.down = true;
             }
             if (e.key === 'k') {
-                keyboardPan.up = true;
+                this.panInputs.up = true;
             }
             if (e.key === 'l') {
-                keyboardPan.right = true;
+                this.panInputs.right = true;
             }
         });
 
-        document.addEventListener('keyup', (e: KeyboardEvent) => {
-            console.log('key is', e.key)
+        this.canvas.addEventListener('keyup', (e: KeyboardEvent) => {
             if (e.key === 'h') {
-                keyboardPan.left = false;
+                this.panInputs.left = false;
             }
             if (e.key === 'j') {
-                keyboardPan.down = false;
+                this.panInputs.down = false;
             }
             if (e.key === 'k') {
-                keyboardPan.up = false;
+                this.panInputs.up = false;
             }
             if (e.key === 'l') {
-                keyboardPan.right = false;
+                this.panInputs.right = false;
             }
         });
-
-        const pointerMoved = () => {
-            let point = this.viewport.toWorld(latestMousePos.x, latestMousePos.y);
-            this.listeners["pointermove"].forEach((callback) => callback({
-                event: {},
-                point: { x: point.x, y: -point.y },
-            }));
-        }
 
         setInterval(() => {
             let x = 0;
             let y = 0;
-            let speed = 0.3;
-            if (keyboardPan.left) {
+            let speed = 2 / this.viewport.scale.y;
+            if (this.panInputs.left) {
                 x = -1;
             }
-            if (keyboardPan.down) {
+            if (this.panInputs.down) {
                 y = 1;
             }
-            if (keyboardPan.up) {
+            if (this.panInputs.up) {
                 y = -1;
             }
-            if (keyboardPan.right) {
+            if (this.panInputs.right) {
                 x = 1;
             }
             if (x !== 0 || y !== 0) {
@@ -146,7 +152,7 @@ export default class SimuloViewerPIXI {
                 y *= speed;
                 this.viewport.moveCenter(this.viewport.center.x + x, this.viewport.center.y + y);
             }
-            pointerMoved();
+            this.updateMouse("pointermove");
         }, 10);
 
         let me = this;
@@ -165,6 +171,7 @@ export default class SimuloViewerPIXI {
 
         window.addEventListener("resize", onWindowResize, false);
 
+        // starting position
         this.lookAt({
             target: { x: -10.0, y: -30.0 },
             zoom: 7.0,
@@ -180,7 +187,7 @@ export default class SimuloViewerPIXI {
         }
         if (Object.keys(stepInfo.delta.shapeContent).length > 0) console.log('registered ' + Object.keys(stepInfo.delta.shapeContent).length + ' shapes')
         this.updatePositions(stepInfo.delta.shapeTransforms);
-        // draw a line for each spring
+        // draw a line for each spring, will soon support images
         this.springGFXs.forEach((gfx) => {
             this.viewport.removeChild(gfx)
         });
@@ -207,16 +214,6 @@ export default class SimuloViewerPIXI {
 
     updatePositions(transformData: { [id: string]: ShapeTransformData }) {
         Object.keys(transformData).forEach((id) => {
-            /*let gfx = this.coll2gfx.get(elt.handle);
-            let translation = elt.translation();
-            let rotation = elt.rotation();
-
-            if (!!gfx) {
-                gfx.position.x = translation.x;
-                gfx.position.y = -translation.y;
-                gfx.rotation = -rotation;
-            }*/
-
             let gfx = this.coll2gfx.get(id);
             let data = transformData[id];
             let position = { x: data.x, y: data.y };
@@ -240,7 +237,7 @@ export default class SimuloViewerPIXI {
 
     addShape(content: ShapeContentData) {
         if (this.coll2gfx.has(content.id)) {
-            // remove it
+            // remove it so we dont get ghost shapes
             let gfx = this.coll2gfx.get(content.id);
             if (gfx) {
                 this.viewport.removeChild(gfx);
@@ -251,12 +248,14 @@ export default class SimuloViewerPIXI {
         switch (content.type) {
             case "rectangle":
                 let rectangle = content as Rectangle;
+
                 /*gfx.scale.x = rectangle.width;
                 gfx.scale.y = rectangle.height;
                 gfx.beginFill(rectangle.color, 0xff);
                 gfx.drawRect(-1, 1, 2, -2);
                 gfx.endFill();*/
-                // polygon instead
+
+                // polygon instead since for some reason it doesnt render the rectangle, will try to fix later but for now this works
                 gfx.beginFill(rectangle.color);
                 gfx.moveTo(-rectangle.width / 2, rectangle.height / 2);
                 gfx.lineTo(rectangle.width / 2, rectangle.height / 2);
@@ -270,16 +269,15 @@ export default class SimuloViewerPIXI {
                 gfx.scale.x = circle.radius;
                 gfx.scale.y = circle.radius;
                 gfx.beginFill(circle.color);
-                gfx.drawCircle(0, 0, 1);
+                //gfx.drawCircle(0, 0, 1);
+                // arc manually since circle doesnt have enough segments
+                gfx.arc(0, 0, 1, 0, Math.PI * 2);
                 gfx.endFill();
                 break;
             case "polygon":
                 let polygon = content as Polygon;
                 gfx.beginFill(polygon.color);
                 gfx.moveTo(polygon.points[0][0], -polygon.points[0][1]);
-                /*                 for (i = 2; i < vertices.length; i += 2) {
-                    graphics.lineTo(vertices[i], -vertices[i + 1]);
-                } */ // same logic but with our data structure
                 for (let i = 1; i < polygon.points.length; i++) {
                     gfx.lineTo(polygon.points[i][0], -polygon.points[i][1]);
                 }
@@ -290,8 +288,6 @@ export default class SimuloViewerPIXI {
                 console.error("Unknown shape type: " + content.type);
                 break;
         }
-
-        //console.log('registered shape')
 
         this.coll2gfx.set(content.id, gfx);
         this.viewport.addChild(gfx);

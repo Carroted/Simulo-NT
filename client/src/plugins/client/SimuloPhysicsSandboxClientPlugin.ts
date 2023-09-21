@@ -17,14 +17,34 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     controller: SimuloClientController;
     viewer: SimuloViewerPIXI;
 
-    async generateCursor(color: string) {
-        // ok so basically
+    cachedImages: { [url: string]: any } = {}; // can store string for svg for example, or something else for rasters
+
+    async fetchSVG(url: string) {
+        if (this.cachedImages[url]) return this.cachedImages[url];
+        this.cachedImages[url] = await (await fetch(url)).text();
+        return this.cachedImages[url];
+    }
+
+    /** Generate a recolored SVG cursor and apply it on the document body. */
+    async setColorCursor(image: string, fillColor: string, borderColor?: string) { // in the future, we will have way more kinds of cursors. anyone will be able to create a recolorable cursor
         // the cursor is an svg with some colors to replace to create a custom cursor
-        let cursorSVG = await (await fetch('./assets/textures/cursor_new.svg')).text();
-        cursorSVG = cursorSVG.replace(/#ff0000/g, color);
-        cursorSVG = cursorSVG.replace(/#0000ff/g, color === '#000000' ? '#ffffff' : '#000000');
+
+        // fetch the svg
+        let cursorSVG = await this.fetchSVG(image);
+
+        // if you open that texture you'll see that it's in red and blue
+        // by replacing the colors we can change the cursor colors to anything at runtime
+        cursorSVG = cursorSVG.replace(/#ff0000/g, fillColor);
+        if (!borderColor) {
+            cursorSVG = cursorSVG.replace(/#0000ff/g, fillColor === '#000000' ? '#ffffff' : '#000000');
+        }
+        else {
+            cursorSVG = cursorSVG.replace(/#0000ff/g, borderColor);
+        }
+
         // create a data url from the svg
         let cursorDataURL = 'data:image/svg+xml;base64,' + btoa(cursorSVG);
+
         // set body cursor
         document.body.style.cursor = `url("${cursorDataURL}") 8 3, auto`;
     }
@@ -32,6 +52,8 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     constructor(controller: SimuloClientController) {
         this.controller = controller;
         this.viewer = new SimuloViewerPIXI();
+
+        // listen to viewer events and emit them to the server in Physics Sandbox format
 
         this.viewer.on('pointerdown', (e: { point: { x: number, y: number }, event: any }) => {
             if (e.event.button === 0) {
@@ -53,16 +75,15 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         }
         requestAnimationFrame(renderLoop);
 
-        this.generateCursor('#000000');
+        this.setColorCursor('./assets/textures/cursor_new.svg', '#000000');
     }
 
-    destroy(): void { }
+    destroy(): void { } // for now, nothing in destroy. in the future, this should properly dispose of everything cleanly
+
     handleIncomingEvent(event: string, data: any): void {
         if (event === 'physics_step') {
-            // we get the physics step info from the server
+            // the world has updated, let's update the viewer with the new data
             let stepInfo = data as SimuloPhysicsStepInfo;
-            //console.log(stepInfo.delta.shapeTransforms);
-            // we can use this to update the viewer
             this.viewer.update(stepInfo);
         }
     }

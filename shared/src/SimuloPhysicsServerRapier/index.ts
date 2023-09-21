@@ -26,6 +26,7 @@ interface Circle extends ShapeContentData {
     radius: number;
 }
 
+/** Translation and rotation to apply to a shape. Scale is not included in this (and is instead in `ShapeContentData`) since it rarely changes, unlike position and rotation, which usually change every frame. */
 interface ShapeTransformData {
     x: number;
     y: number;
@@ -34,24 +35,50 @@ interface ShapeTransformData {
 
 interface SimuloPhysicsStepInfo {
     delta: {
+        /** Shape content that has changed since last step. */
         shapeContent: { [id: string]: ShapeContentData };
+
+        /** New positioning and rotation of shape contents. */
         shapeTransforms: { [id: string]: ShapeTransformData };
     };
+
     ms: number;
+
+    /** Spring rendering data */
     springs: SimuloSpringInfo[];
 }
 
-/** Simulo creates fake spring joint with `addForceAtPoint` on two bodies */
+/** Simulo creates fake spring joint with `applyImpulseAtPoint` on two bodies.
+ * 
+ * Since you provide your own functions like `getBodyAPosition`, this is general-purpose, and you can do things like attach one end to a mouse cursor. */
 
 interface SimuloSpring {
-    bodyA: Rapier.RigidBody;
-    bodyB: Rapier.RigidBody;
+    getBodyAPosition: () => Rapier.Vector2;
+    getBodyBPosition: () => Rapier.Vector2;
+
+    getBodyARotation: () => number;
+    getBodyBRotation: () => number;
+
+    getBodyAVelocity: () => Rapier.Vector2;
+    getBodyBVelocity: () => Rapier.Vector2;
+
+    applyBodyAImpulse: (impulse: Rapier.Vector2, worldPoint: Rapier.Vector2) => void;
+    applyBodyBImpulse: (impulse: Rapier.Vector2, worldPoint: Rapier.Vector2) => void;
+
     localAnchorA: Rapier.Vector2;
     localAnchorB: Rapier.Vector2;
+
+    /** Multiplier of spring impulse */
     stiffness: number;
+
+    /** Dampens spring, stopping it from infinitely oscillating */
     damping: number;
-    targetLength: number; // aka rest length, i think target is a better name
+
+    /** Target length is also known as rest length. We chose to call it target length because it's more descriptive of how it's used. */
+    targetLength: number;
 }
+
+/** The spring data needed for rendering */
 
 interface SimuloSpringInfo {
     pointA: { x: number, y: number };
@@ -60,8 +87,6 @@ interface SimuloSpringInfo {
 
 class SimuloPhysicsServerRapier {
     world: Rapier.World | null = null;
-    //graphics: Graphics;
-    //mouse: { x: number; y: number };
     listeners: { [key: string]: Function[] } = {};
     colliders: Rapier.Collider[] = [];
     changedContents: { [id: string]: ShapeContentData } = {};
@@ -85,14 +110,15 @@ class SimuloPhysicsServerRapier {
         }
     }
 
-    /** random hex number like 0xffffff */
+    /** Random hex number like `0xffffff` */
     randomColor(hueMin: number, hueMax: number, saturationMin: number, saturationMax: number, valueMin: number, valueMax: number): number {
         let hue = hueMin + Math.random() * (hueMax - hueMin);
         let saturation = saturationMin + Math.random() * (saturationMax - saturationMin);
         let value = valueMin + Math.random() * (valueMax - valueMin);
         return this.hsvToHex(hue, saturation, value);
     }
-    // params are 0 to 1
+
+    /** HSV (0-1) to hex number like `0xffffff` */
     hsvToHex(h: number, s: number, v: number): number {
         let r, g, b;
         let i = Math.floor(h * 6);
@@ -207,48 +233,48 @@ class SimuloPhysicsServerRapier {
         return transforms;
     }
 
+    /** Simulo uses virtual springs with impulses applied each frame, since Rapier doesn't have built-in springs */
     springs: SimuloSpring[] = [];
 
-    groundBody: Rapier.RigidBody | null = null;
+    /** There is no constructor, but that's fine since you can set this before calling `init` */
+    gravity: { x: number; y: number } = { x: 0, y: -9.81 };
 
     async init() {
         await RAPIER.init();
 
-        let gravity = new RAPIER.Vector2(0.0, -9.81);
+        let gravity = new RAPIER.Vector2(this.gravity.x, this.gravity.y);
         let world = new RAPIER.World(gravity);
         this.world = world;
 
         this.world.maxVelocityIterations = 4;
         this.world.maxVelocityFrictionIterations =
             4 * 2;
-        //this.graphics = new Graphics();
 
-        let groundPlane = this.addRectangle(1000, 500, {
-            id: "ground",
-            color: 0xa1acfa,
-            border: 0xffffff,
-            name: 'joe',
-            sound: 'test',
-            borderWidth: 1,
-            borderScaleWithZoom: true,
-            image: null,
-            zDepth: 0,
-        }, [0, -510], true);
+        let groundPlane = this.addRectangle({
+            width: 1000,
+            height: 500,
+            data: {
+                id: "ground",
+                color: 0xa1acfa,
+                border: 0xffffff,
+                name: 'joe',
+                sound: 'test',
+                borderWidth: 1,
+                borderScaleWithZoom: true,
+                image: null,
+                zDepth: 0,
+            },
+            position: { x: 0, y: -510 },
+            isStatic: true,
+            friction: 0.5,
+            restitution: 0.5,
+            density: 1,
+        });
 
-        let groundBodyDesc = RAPIER.RigidBodyDesc.fixed();
-        this.groundBody = this.world.createRigidBody(groundBodyDesc);
-
-        /*// Create Ground.
-        let groundSize = 40.0;
-        let grounds = [
-            { x: 0.0, y: 0.0, hx: groundSize, hy: 0.1 },
-            { x: -groundSize, y: groundSize, hx: 0.1, hy: groundSize },
-            { x: groundSize, y: groundSize, hx: 0.1, hy: groundSize },
-        ];
-
-        grounds.forEach((ground) => {
-            this.addRectangle(ground.hx, ground.hy, {
-                id: "ground" + Math.random().toString(),
+        let bodyA = this.addRectangle({
+            width: 5, height: 1,
+            data: {
+                id: "springboxA",
                 color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
                 border: 0xffffff,
                 name: 'joe',
@@ -257,124 +283,160 @@ class SimuloPhysicsServerRapier {
                 borderScaleWithZoom: true,
                 image: null,
                 zDepth: 0,
-            }, [ground.x, ground.y], true);
-        });*/
-        /*
-                // Dynamic cubes.
-                let num = 20;
-                let numy = 50;
-                let rad = 1.0;
-        
-                let shift = rad * 2.0 + rad;
-                let centerx = shift * (num / 2);
-                let centery = shift / 2.0;
-        
-                let i, j;
-        
-                for (j = 0; j < numy; ++j) {
-                    for (i = 0; i < num; ++i) {
-                        let x = i * shift - centerx;
-                        let y = j * shift + centery + 3.0;
-        
-                        this.addRectangle(rad, rad, {
-                            id: "box" + i.toString() + "-" + j.toString(),
-                            color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-                            border: 0xffffff,
-                            name: 'joe',
-                            sound: 'test',
-                            borderWidth: 1,
-                            borderScaleWithZoom: true,
-                            image: null,
-                            zDepth: 0,
-                        }, [x, y], false);
-                    }
-                }*/
+            },
+            position: { x: -3, y: 10 },
+            isStatic: false,
+            friction: 0.5,
+            restitution: 0.5,
+            density: 1,
+        });
 
-        let bodyA = this.addRectangle(5, 1, {
-            id: "springboxA",
-            color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-            border: 0xffffff,
-            name: 'joe',
-            sound: 'test',
-            borderWidth: 1,
-            borderScaleWithZoom: true,
-            image: null,
-            zDepth: 0,
-        }, [-3, 10], false);
-        let bodyB = this.addRectangle(1, 1, {
-            id: "springboxB",
-            color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-            border: 0xffffff,
-            name: 'joe',
-            sound: 'test',
-            borderWidth: 1,
-            borderScaleWithZoom: true,
-            image: null,
-            zDepth: 0,
-        }, [5, 5], false);
+        let bodyB = this.addRectangle({
+            width: 1, height: 1,
+            data: {
+                id: "springboxB",
+                color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+                border: 0xffffff,
+                name: 'joe',
+                sound: 'test',
+                borderWidth: 1,
+                borderScaleWithZoom: true,
+                image: null,
+                zDepth: 0,
+            },
+            position: { x: 5, y: 5 },
+            isStatic: false,
+            friction: 0.5,
+            restitution: 0.5,
+            density: 1,
+        });
 
-        /*this.springs.push({
-            bodyA: bodyA.parent()!,
-            bodyB: bodyB.parent()!,
-            stiffness: 0.1,
-            // since these are unused and this is prototype code ill delete, using random vars
-            localAnchorA: "69 lmao" as any,
-            localAnchorB: "real, bro" as any,
-            targetLength: 1,
-            damping: 0.1
-        })*/
+        let bodyC = this.addCircle({
+            radius: 3,
+            data: {
+                id: "springcirclelmao",
+                color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+                border: 0xffffff,
+                name: 'joe',
+                sound: 'test',
+                borderWidth: 1,
+                borderScaleWithZoom: true,
+                image: null,
+                zDepth: 0,
+            },
+            position: { x: 0, y: 0 },
+            isStatic: false,
+            friction: 0.5,
+            restitution: 0.5,
+            density: 1,
+        });
     }
 
     /** multiple gon */
-    addPolygon(points: [x: number, y: number][], data: SimuloObjectData, position: [x: number, y: number], isStatic: boolean = false) {
+    addPolygon(polygon: {
+        points: { x: number, y: number }[],
+        data: SimuloObjectData,
+        position: { x: number, y: number },
+        isStatic: boolean,
+        friction: number,
+        restitution: number,
+        density: number,
+    }) {
         if (!this.world) { throw new Error('init world first'); }
 
-        let bodyDesc = isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
+        let bodyDesc = polygon.isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
+
         bodyDesc = bodyDesc.setTranslation(
-            position[0],
-            position[1]
+            polygon.position.x,
+            polygon.position.y
         );
-        bodyDesc.setUserData(data);
+
+        bodyDesc.setUserData(polygon.data);
 
         let body = this.world.createRigidBody(bodyDesc);
 
         let colliderDesc = RAPIER.ColliderDesc.convexHull(
-            new Float32Array(points.flat()),
+            new Float32Array(polygon.points.flatMap((point) => [point.x, point.y]))
         );
+
+        if (!colliderDesc) {
+            throw new Error('Failed to create collider');
+        }
+
+        colliderDesc = colliderDesc.setRestitution(polygon.restitution).setFriction(polygon.friction).setDensity(polygon.density);
         let coll = this.world.createCollider(colliderDesc!, body);
-        //this.graphics.addCollider(RAPIER, this.world, coll);
+
         this.colliders.push(coll);
         let content = this.getShapeContent(coll);
         if (content) {
-            this.changedContents[data.id] = content;
+            this.changedContents[polygon.data.id] = content;
         }
 
         return coll;
     }
 
-    addRectangle(width: number, height: number, data: SimuloObjectData, position: [x: number, y: number], isStatic: boolean) {
+    addRectangle(rectangle: {
+        width: number,
+        height: number,
+        data: SimuloObjectData,
+        position: { x: number, y: number }
+        isStatic: boolean,
+        friction: number,
+        restitution: number,
+        density: number,
+    }) {
         if (!this.world) { throw new Error('init world first'); }
-        let bodyDesc = isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
+        let bodyDesc = rectangle.isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
         bodyDesc = bodyDesc.setTranslation(
-            position[0],
-            position[1]
+            rectangle.position.x,
+            rectangle.position.y
         );
 
-        bodyDesc.setUserData(data);
+        bodyDesc.setUserData(rectangle.data);
         let body = this.world.createRigidBody(bodyDesc);
         // no collide
-        let colliderDesc = RAPIER.ColliderDesc.cuboid(width, height).setRestitution(0.1).setFriction(0.5)//.setCollisionGroups(0)
+        let colliderDesc = RAPIER.ColliderDesc.cuboid(rectangle.width, rectangle.height).setRestitution(rectangle.restitution).setFriction(rectangle.friction).setDensity(rectangle.density);
         let coll = this.world.createCollider(colliderDesc!, body);
-        //this.graphics.addCollider(RAPIER, this.world, coll);
+
         this.colliders.push(coll);
         let content = this.getShapeContent(coll);
         if (content) {
-            this.changedContents[data.id] = content;
+            this.changedContents[rectangle.data.id] = content;
         }
 
         return coll;
     }
 
+    addCircle(circle: {
+        radius: number,
+        data: SimuloObjectData,
+        position: { x: number, y: number },
+        isStatic: boolean,
+        friction: number,
+        restitution: number,
+        density: number,
+    }) {
+        if (!this.world) { throw new Error('init world first'); }
+        let bodyDesc = circle.isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
+        bodyDesc = bodyDesc.setTranslation(
+            circle.position.x,
+            circle.position.y
+        );
+
+        bodyDesc.setUserData(circle.data);
+        let body = this.world.createRigidBody(bodyDesc);
+        // no collide
+        let colliderDesc = RAPIER.ColliderDesc.ball(circle.radius).setRestitution(circle.restitution).setFriction(circle.friction).setDensity(circle.density);
+        let coll = this.world.createCollider(colliderDesc!, body);
+
+        this.colliders.push(coll);
+        let content = this.getShapeContent(coll);
+        if (content) {
+            this.changedContents[circle.data.id] = content;
+        }
+
+        return coll;
+    }
 
     step(): SimuloPhysicsStepInfo {
         if (!this.world) { throw new Error('init world first'); }
@@ -389,15 +451,14 @@ class SimuloPhysicsServerRapier {
         this.changedContents = {};
 
         return {
-            // still very temporary, this isnt a delta but we will make it one soon
             delta: {
                 shapeContent: changed,
-                shapeTransforms: this.getShapeTransforms(),
+                shapeTransforms: this.getShapeTransforms(), // this should be changed to a delta since lots of bodies are sleeping
             },
             ms: new Date().getTime() - before,
             springs: this.springs.map((spring) => {
-                let pointA = this.getWorldPoint(spring.bodyA, spring.localAnchorA);
-                let pointB = this.getWorldPoint(spring.bodyB, spring.localAnchorB);
+                let pointA = this.getWorldPoint(spring.getBodyAPosition(), spring.getBodyARotation(), spring.localAnchorA);
+                let pointB = this.getWorldPoint(spring.getBodyBPosition(), spring.getBodyBRotation(), spring.localAnchorB);
                 return {
                     pointA: { x: pointA.x, y: pointA.y },
                     pointB: { x: pointB.x, y: pointB.y },
@@ -477,17 +538,8 @@ class SimuloPhysicsServerRapier {
         return new RAPIER.Vector2(a.x * b.y, -a.y * b.x);
     }
 
-    combineCoefficients(dt: number, stiffness: number, damping: number): [erp_inv_dt: number, no_one_knows: number, cfm_gain: number] {
-        const inv = (val: number) => 1 / val;
-        const erp_inv_dt = stiffness * inv(dt * stiffness + damping);
-        const cfm_gain = inv(dt * dt * stiffness + dt * damping);
-        return [erp_inv_dt, 0.0, cfm_gain];
-    }
-
-    /** local point factoring in both position and rotation of body, with fancy Math. functions like math.cos */
-    getLocalPoint(body: RAPIER.RigidBody, worldPoint: RAPIER.Vector2) {
-        const bodyPosition = body.translation();
-        const bodyRotation = body.rotation();
+    /** Convert a world point to a local point */
+    getLocalPoint(bodyPosition: RAPIER.Vector2, bodyRotation: number, worldPoint: RAPIER.Vector2) {
         const cos = Math.cos(bodyRotation);
         const sin = Math.sin(bodyRotation);
         const x = worldPoint.x - bodyPosition.x;
@@ -496,9 +548,9 @@ class SimuloPhysicsServerRapier {
         const localY = -x * sin + y * cos;
         return new RAPIER.Vector2(localX, localY);
     }
-    getWorldPoint(body: RAPIER.RigidBody, localPoint: RAPIER.Vector2) {
-        const bodyPosition = body.translation();
-        const bodyRotation = body.rotation();
+
+    /** Convert a local point to a world point */
+    getWorldPoint(bodyPosition: RAPIER.Vector2, bodyRotation: number, localPoint: RAPIER.Vector2) {
         const cos = Math.cos(bodyRotation);
         const sin = Math.sin(bodyRotation);
         const x = localPoint.x;
@@ -507,38 +559,27 @@ class SimuloPhysicsServerRapier {
         const worldY = x * sin + y * cos + bodyPosition.y;
         return new RAPIER.Vector2(worldX, worldY);
     }
-    applySpringForce(spring: SimuloSpring) {
-        const pointAWorld = this.getWorldPoint(spring.bodyA, spring.localAnchorA);
-        const pointBWorld = this.getWorldPoint(spring.bodyB, spring.localAnchorB);
 
-        const velA = spring.bodyA.linvel();
-        const velB = spring.bodyB.linvel();
+    applySpringForce(spring: SimuloSpring) {
+        const pointAWorld = this.getWorldPoint(spring.getBodyAPosition(), spring.getBodyARotation(), spring.localAnchorA);
+        const pointBWorld = this.getWorldPoint(spring.getBodyBPosition(), spring.getBodyBRotation(), spring.localAnchorB);
+
+        // will be used soon. if these unused consts bother you, consider adding them to the fomula :)
+        const velA = spring.getBodyAVelocity();
+        const velB = spring.getBodyBVelocity();
+
         const springVector = this.sub(pointBWorld, pointAWorld);
         const distance = this.magnitude(springVector);
         const direction = this.normalize(springVector);
-        //const forceMagnitude = spring.stiffness * (distance - spring.targetLength);
+
         const forceMagnitude = spring.stiffness * (distance - spring.targetLength) + (spring.damping);
 
         const forceOnA = this.multiply(direction, forceMagnitude);
         const forceOnB = this.multiply(direction, -forceMagnitude);
 
-        spring.bodyA.applyImpulseAtPoint(forceOnA, pointAWorld, true);
-        spring.bodyB.applyImpulseAtPoint(forceOnB, pointBWorld, true);
-    }/*
-    applySpringForce(spring: SimuloSpring, deltaTime: number = 1 / 60) {,
-        const pointAWorld = spring.bodyA.translation();
-        const pointBWorld = spring.bodyB.translation();
-        const springVector = this.sub(pointBWorld, pointAWorld);
-        const distance = this.magnitude(springVector);
-        const direction = this.normalize(springVector);
-        const forceMagnitude = -spring.stiffness * (distance - spring.targetLength);
-
-        const forceOnA = this.multiply(direction, forceMagnitude);
-        const forceOnB = this.multiply(direction, -forceMagnitude);
-
-        spring.bodyA.addForce(forceOnA, true);
-        spring.bodyB.addForce(forceOnB, true);
-    }*/
+        spring.applyBodyAImpulse(forceOnA, pointAWorld);
+        spring.applyBodyBImpulse(forceOnB, pointBWorld);
+    }
 }
 
 export default SimuloPhysicsServerRapier;

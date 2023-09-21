@@ -1,5 +1,6 @@
-// base details for all items, like plugins, objects, mods, scenes, etc
+/** Base details for all items, like plugins, objects, mods, scenes, etc */
 export default interface SimuloItemDetails {
+    /** Display name for the item */
     name: string;
     description: string;
     version: string;
@@ -7,7 +8,7 @@ export default interface SimuloItemDetails {
     namespace: string;
     id: string;
     dependencies: string[];
-    // not a date so that it plays well with JSON
+    // not dates, so that they play well with JSON
     createdAt?: string;
     updatedAt?: string;
 }
