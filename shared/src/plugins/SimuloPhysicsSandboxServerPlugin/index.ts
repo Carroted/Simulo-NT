@@ -91,8 +91,8 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                         // since these are unused and this is prototype code ill delete, using random vars
                         localAnchorA: this.physicsPlugin.physicsServer.getLocalPoint(target.parent()!, { x: data.x, y: data.y }),
                         localAnchorB: { x: 0, y: 0 },
-                        targetLength: 1,
-                        damping: 0.1
+                        targetLength: 0,
+                        damping: 1
                     })
                 }
                 else {

@@ -516,7 +516,8 @@ class SimuloPhysicsServerRapier {
         const springVector = this.sub(pointBWorld, pointAWorld);
         const distance = this.magnitude(springVector);
         const direction = this.normalize(springVector);
-        const forceMagnitude = spring.stiffness * (distance - spring.targetLength);
+        //const forceMagnitude = spring.stiffness * (distance - spring.targetLength);
+        const forceMagnitude = spring.stiffness * (distance - spring.targetLength) + (spring.damping);
 
         const forceOnA = this.multiply(direction, forceMagnitude);
         const forceOnB = this.multiply(direction, -forceMagnitude);
