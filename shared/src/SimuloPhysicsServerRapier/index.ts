@@ -290,7 +290,7 @@ class SimuloPhysicsServerRapier {
                     }
                 }*/
 
-        let bodyA = this.addRectangle(1, 1, {
+        let bodyA = this.addRectangle(5, 1, {
             id: "springboxA",
             color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
             border: 0xffffff,
@@ -363,7 +363,7 @@ class SimuloPhysicsServerRapier {
         bodyDesc.setUserData(data);
         let body = this.world.createRigidBody(bodyDesc);
         // no collide
-        let colliderDesc = RAPIER.ColliderDesc.cuboid(width, height).setRestitution(0).setFriction(0).setMass(1)//.setCollisionGroups(0)
+        let colliderDesc = RAPIER.ColliderDesc.cuboid(width, height).setRestitution(0.1).setFriction(0.5)//.setCollisionGroups(0)
         let coll = this.world.createCollider(colliderDesc!, body);
         //this.graphics.addCollider(RAPIER, this.world, coll);
         this.colliders.push(coll);
@@ -396,11 +396,11 @@ class SimuloPhysicsServerRapier {
             },
             ms: new Date().getTime() - before,
             springs: this.springs.map((spring) => {
-                let bodyATranslation = spring.bodyA.translation();
-                let bodyBTranslation = spring.bodyB.translation();
+                let pointA = this.getWorldPoint(spring.bodyA, spring.localAnchorA);
+                let pointB = this.getWorldPoint(spring.bodyB, spring.localAnchorB);
                 return {
-                    pointA: { x: bodyATranslation.x, y: bodyATranslation.y },
-                    pointB: { x: bodyBTranslation.x, y: bodyBTranslation.y },
+                    pointA: { x: pointA.x, y: pointA.y },
+                    pointB: { x: pointB.x, y: pointB.y },
                 }
             })
         };
@@ -484,9 +484,33 @@ class SimuloPhysicsServerRapier {
         return [erp_inv_dt, 0.0, cfm_gain];
     }
 
+    /** local point factoring in both position and rotation of body, with fancy Math. functions like math.cos */
+    getLocalPoint(body: RAPIER.RigidBody, worldPoint: RAPIER.Vector2) {
+        const bodyPosition = body.translation();
+        const bodyRotation = body.rotation();
+        const cos = Math.cos(bodyRotation);
+        const sin = Math.sin(bodyRotation);
+        const x = worldPoint.x - bodyPosition.x;
+        const y = worldPoint.y - bodyPosition.y;
+        const localX = x * cos + y * sin;
+        const localY = -x * sin + y * cos;
+        return new RAPIER.Vector2(localX, localY);
+    }
+    getWorldPoint(body: RAPIER.RigidBody, localPoint: RAPIER.Vector2) {
+        const bodyPosition = body.translation();
+        const bodyRotation = body.rotation();
+        const cos = Math.cos(bodyRotation);
+        const sin = Math.sin(bodyRotation);
+        const x = localPoint.x;
+        const y = localPoint.y;
+        const worldX = x * cos - y * sin + bodyPosition.x;
+        const worldY = x * sin + y * cos + bodyPosition.y;
+        return new RAPIER.Vector2(worldX, worldY);
+    }
     applySpringForce(spring: SimuloSpring) {
-        const pointAWorld = spring.bodyA.translation();
-        const pointBWorld = spring.bodyB.translation();
+        const pointAWorld = this.getWorldPoint(spring.bodyA, spring.localAnchorA);
+        const pointBWorld = this.getWorldPoint(spring.bodyB, spring.localAnchorB);
+
         const velA = spring.bodyA.linvel();
         const velB = spring.bodyB.linvel();
         const springVector = this.sub(pointBWorld, pointAWorld);
@@ -497,10 +521,10 @@ class SimuloPhysicsServerRapier {
         const forceOnA = this.multiply(direction, forceMagnitude);
         const forceOnB = this.multiply(direction, -forceMagnitude);
 
-        spring.bodyA.applyImpulse(forceOnA, true);
-        spring.bodyB.applyImpulse(forceOnB, true);
+        spring.bodyA.applyImpulseAtPoint(forceOnA, pointAWorld, true);
+        spring.bodyB.applyImpulseAtPoint(forceOnB, pointBWorld, true);
     }/*
-    applySpringForce(spring: SimuloSpring, deltaTime: number = 1 / 60) {
+    applySpringForce(spring: SimuloSpring, deltaTime: number = 1 / 60) {,
         const pointAWorld = spring.bodyA.translation();
         const pointBWorld = spring.bodyB.translation();
         const springVector = this.sub(pointBWorld, pointAWorld);

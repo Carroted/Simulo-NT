@@ -87,10 +87,10 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                     this.physicsPlugin.physicsServer.springs.push({
                         bodyA: target.parent()!,
                         bodyB: this.physicsPlugin.physicsServer.groundBody!,
-                        stiffness: 0.1,
+                        stiffness: 1,
                         // since these are unused and this is prototype code ill delete, using random vars
-                        localAnchorA: "69 lmao" as any,
-                        localAnchorB: "real, bro" as any,
+                        localAnchorA: this.physicsPlugin.physicsServer.getLocalPoint(target.parent()!, { x: data.x, y: data.y }),
+                        localAnchorB: { x: 0, y: 0 },
                         targetLength: 1,
                         damping: 0.1
                     })
