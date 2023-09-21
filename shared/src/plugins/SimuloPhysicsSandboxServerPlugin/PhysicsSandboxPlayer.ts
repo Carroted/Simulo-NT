@@ -5,4 +5,6 @@ export default interface PhysicsSandboxPlayer {
     x: number;
     y: number;
     color: number;
+    /** If primary input is held down, usually left mouse */
+    down: boolean;
 }

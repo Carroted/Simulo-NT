@@ -23,10 +23,10 @@ let physicsSandboxClientPlugin = new SimuloPhysicsSandboxClientPlugin(client);
 client.addPlugin(physicsSandboxClientPlugin);
 
 // loopback, so simple that we don't need a plugin for this
-server.on('physics_step', (data: any) => {
+server.on('data', (data: { event: string, data: any }) => {
     //console.log('Client got data')
     // any emitted server data is instantly handled on client
-    client.handleIncomingEvent("physics_step", data);
+    client.handleIncomingEvent(data.event, data.data);
 });
 client.on('data', (data: { event: string, data: any }) => {
     //console.log('Server got data')

@@ -35,7 +35,8 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 x: 0,
                 y: 0,
                 color: 0xffffff,
-                id
+                id,
+                down: false,
             }
         }
 
@@ -46,13 +47,36 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 // with nullish coalescing operator we dont need to check if data.x and data.y are defined
                 this.players[id].x = data.x ?? 0;
                 this.players[id].y = data.y ?? 0;
+
+                /*
+                let c = this.physicsPlugin.physicsServer.getObjectAtPoint(data.x, data.y);
+                if (c) {
+                    // @ts-ignore
+                    c.parent().userData.color = Math.round(Math.random() * 0xffffff);
+                    // @ts-ignore
+                    this.physicsPlugin.physicsServer.changedContents[c.parent().userData.id] = this.physicsPlugin.physicsServer.getShapeContent(c);
+                }*/
+
+                if (this.players[id].down) {
+                    this.physicsPlugin.physicsServer.addRectangle(1, 1, {
+                        id: "bo2e2x" + Math.random(),
+                        color: 0xffffff,
+                        border: 0xffffff,
+                        name: 'joe',
+                        sound: 'test',
+                        borderWidth: 1,
+                        borderScaleWithZoom: true,
+                        image: null,
+                        zDepth: 0,
+                    }, [data.x, data.y], false);
+                }
             }
 
             // player_down fires when primary input is pressed, such as mouse left click
             if (event === 'player_down') {
                 // i forgoy
                 console.log('down received')
-                /*this.physicsPlugin.physicsServer.addRectangle(1, 1, {
+                this.physicsPlugin.physicsServer.addRectangle(1, 1, {
                     id: "bo2e2x" + Math.random(),
                     color: 0xffffff,
                     border: 0xffffff,
@@ -62,19 +86,15 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                     borderScaleWithZoom: true,
                     image: null,
                     zDepth: 0,
-                }, [data.x, data.y], false);*/
-                let c = this.physicsPlugin.physicsServer.getObjectAtPoint(data.x, data.y);
-                if (c) {
-                    // @ts-ignore
-                    c.parent().userData.color = 0xff0000;
-                    // @ts-ignore
-                    this.physicsPlugin.physicsServer.changedContents[c.parent().userData.id] = this.physicsPlugin.physicsServer.getShapeContent(c);
-                }
+                }, [data.x, data.y], false);
+                this.players[id].down = true;
+
             }
 
             // player_up fires when primary input is released, such as mouse left click
             if (event === 'player_up') {
                 // i forgoy
+                this.players[id].down = false;
             }
         }
     }

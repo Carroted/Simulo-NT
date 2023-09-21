@@ -38,7 +38,26 @@ interface SimuloPhysicsStepInfo {
         shapeTransforms: { [id: string]: ShapeTransformData };
     };
     ms: number;
+    springs: SimuloSpringInfo[];
 }
+
+/** Simulo creates fake spring joint with `addForceAtPoint` on two bodies */
+
+interface SimuloSpring {
+    bodyA: Rapier.RigidBody;
+    bodyB: Rapier.RigidBody;
+    localAnchorA: Rapier.Vector2;
+    localAnchorB: Rapier.Vector2;
+    stiffness: number;
+    damping: number;
+    targetLength: number; // aka rest length, i think target is a better name
+}
+
+interface SimuloSpringInfo {
+    pointA: { x: number, y: number };
+    pointB: { x: number, y: number };
+}
+
 class SimuloPhysicsServerRapier {
     world: Rapier.World | null = null;
     //graphics: Graphics;
@@ -188,17 +207,24 @@ class SimuloPhysicsServerRapier {
         return transforms;
     }
 
+    springs: SimuloSpring[] = [];
+
     async init() {
         await RAPIER.init();
-        let gravity = new RAPIER.Vector2(0.0, -9.81);
+
+        let gravity = new RAPIER.Vector2(0.0, 0.0);
         let world = new RAPIER.World(gravity);
         this.world = world;
+
+        this.world.maxVelocityIterations = 4;
+        this.world.maxVelocityFrictionIterations =
+            4 * 2;
         //this.graphics = new Graphics();
 
 
 
 
-        // Create Ground.
+        /*// Create Ground.
         let groundSize = 40.0;
         let grounds = [
             { x: 0.0, y: 0.0, hx: groundSize, hy: 0.1 },
@@ -218,50 +244,71 @@ class SimuloPhysicsServerRapier {
                 image: null,
                 zDepth: 0,
             }, [ground.x, ground.y], true);
-        });
+        });*/
+        /*
+                // Dynamic cubes.
+                let num = 20;
+                let numy = 50;
+                let rad = 1.0;
+        
+                let shift = rad * 2.0 + rad;
+                let centerx = shift * (num / 2);
+                let centery = shift / 2.0;
+        
+                let i, j;
+        
+                for (j = 0; j < numy; ++j) {
+                    for (i = 0; i < num; ++i) {
+                        let x = i * shift - centerx;
+                        let y = j * shift + centery + 3.0;
+        
+                        this.addRectangle(rad, rad, {
+                            id: "box" + i.toString() + "-" + j.toString(),
+                            color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+                            border: 0xffffff,
+                            name: 'joe',
+                            sound: 'test',
+                            borderWidth: 1,
+                            borderScaleWithZoom: true,
+                            image: null,
+                            zDepth: 0,
+                        }, [x, y], false);
+                    }
+                }*/
 
-        // Dynamic cubes.
-        let num = 20;
-        let numy = 50;
-        let rad = 1.0;
+        let bodyA = this.addRectangle(1, 1, {
+            id: "springboxA",
+            color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+            border: 0xffffff,
+            name: 'joe',
+            sound: 'test',
+            borderWidth: 1,
+            borderScaleWithZoom: true,
+            image: null,
+            zDepth: 0,
+        }, [-3, 5], false);
+        let bodyB = this.addRectangle(1, 1, {
+            id: "springboxB",
+            color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+            border: 0xffffff,
+            name: 'joe',
+            sound: 'test',
+            borderWidth: 1,
+            borderScaleWithZoom: true,
+            image: null,
+            zDepth: 0,
+        }, [5, 5], true);
 
-        let shift = rad * 2.0 + rad;
-        let centerx = shift * (num / 2);
-        let centery = shift / 2.0;
-
-        let i, j;
-
-        for (j = 0; j < numy; ++j) {
-            for (i = 0; i < num; ++i) {
-                let x = i * shift - centerx;
-                let y = j * shift + centery + 3.0;
-
-                this.addRectangle(rad, rad, {
-                    id: "box" + i.toString() + "-" + j.toString(),
-                    color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-                    border: 0xffffff,
-                    name: 'joe',
-                    sound: 'test',
-                    borderWidth: 1,
-                    borderScaleWithZoom: true,
-                    image: null,
-                    zDepth: 0,
-                }, [x, y], false);
-            }
-        }
-
-        /*this.mouse = { x: 0, y: 0 };
-
-        window.addEventListener("mousemove", (event) => {
-            this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            this.mouse.y = 1 - (event.clientY / window.innerHeight) * 2;
-        });
-
-        this.graphics.viewport.moveCenter(-100.0, -300.0);*/
-    }
-
-    constructor() {
-
+        this.springs.push({
+            bodyA: bodyA.parent()!,
+            bodyB: bodyB.parent()!,
+            stiffness: 0.1,
+            // since these are unused and this is prototype code ill delete, using random vars
+            localAnchorA: "69 lmao" as any,
+            localAnchorB: "real, bro" as any,
+            targetLength: 5,
+            damping: 0
+        })
     }
 
     /** multiple gon */
@@ -287,6 +334,8 @@ class SimuloPhysicsServerRapier {
         if (content) {
             this.changedContents[data.id] = content;
         }
+
+        return coll;
     }
 
     addRectangle(width: number, height: number, data: SimuloObjectData, position: [x: number, y: number], isStatic: boolean) {
@@ -296,9 +345,11 @@ class SimuloPhysicsServerRapier {
             position[0],
             position[1]
         );
+
         bodyDesc.setUserData(data);
         let body = this.world.createRigidBody(bodyDesc);
-        let colliderDesc = RAPIER.ColliderDesc.cuboid(width, height);
+        // no collide
+        let colliderDesc = RAPIER.ColliderDesc.cuboid(width, height).setRestitution(0).setFriction(0).setMass(1)
         let coll = this.world.createCollider(colliderDesc!, body);
         //this.graphics.addCollider(RAPIER, this.world, coll);
         this.colliders.push(coll);
@@ -306,16 +357,18 @@ class SimuloPhysicsServerRapier {
         if (content) {
             this.changedContents[data.id] = content;
         }
+
+        return coll;
     }
+
 
     step(): SimuloPhysicsStepInfo {
         if (!this.world) { throw new Error('init world first'); }
 
-        this.world.maxVelocityIterations = 4;
-        this.world.maxVelocityFrictionIterations =
-            4 * 2;
-
         let before = new Date().getTime();
+        this.springs.forEach((spring) => {
+            this.applySpringForce(spring);
+        });
         this.world.step();
 
         let changed = this.changedContents;
@@ -328,6 +381,14 @@ class SimuloPhysicsServerRapier {
                 shapeTransforms: this.getShapeTransforms(),
             },
             ms: new Date().getTime() - before,
+            springs: this.springs.map((spring) => {
+                let bodyATranslation = spring.bodyA.translation();
+                let bodyBTranslation = spring.bodyB.translation();
+                return {
+                    pointA: { x: bodyATranslation.x, y: bodyATranslation.y },
+                    pointB: { x: bodyBTranslation.x, y: bodyBTranslation.y },
+                }
+            })
         };
     }
 
@@ -350,6 +411,67 @@ class SimuloPhysicsServerRapier {
             }
         });
         return contents;
+    }
+
+    normalize(v: Rapier.Vector2): Rapier.Vector2 {
+        let len = Math.sqrt(v.x ** 2 + v.y ** 2);
+        if (len === 0) return new RAPIER.Vector2(0, 0);
+        return new RAPIER.Vector2(v.x / len, v.y / len);
+    }
+
+    sub(a: Rapier.Vector2, b: Rapier.Vector2): Rapier.Vector2 {
+        return new RAPIER.Vector2(a.x - b.x, a.y - b.y);
+    }
+
+    magnitude(v: Rapier.Vector2): number {
+        return Math.sqrt(v.x ** 2 + v.y ** 2);
+    }
+
+    distance(a: Rapier.Vector2, b: Rapier.Vector2): number {
+        return this.magnitude(this.sub(a, b));
+    }
+
+    multiply(v: Rapier.Vector2, s: number): Rapier.Vector2 {
+        return new RAPIER.Vector2(v.x * s, v.y * s);
+    }
+
+    vecToString(v: Rapier.Vector2): string {
+        return `(${v.x}, ${v.y})`;
+    }
+
+    add(a: Rapier.Vector2, b: Rapier.Vector2): Rapier.Vector2 {
+        return new RAPIER.Vector2(a.x + b.x, a.y + b.y);
+    }
+
+    dot(a: Rapier.Vector2, b: Rapier.Vector2): number {
+        return a.x * b.x + a.y * b.y;
+    }
+
+    crossZV(s: number, v: Rapier.Vector2): Rapier.Vector2 {
+        return new RAPIER.Vector2(-s * v.y, s * v.x);
+    }
+
+    combineCoefficients(dt: number, stiffness: number, damping: number): [erp_inv_dt: number, no_one_knows: number, cfm_gain: number] {
+        const inv = (val: number) => 1 / val;
+        const erp_inv_dt = stiffness * inv(dt * stiffness + damping);
+        const cfm_gain = inv(dt * dt * stiffness + dt * damping);
+        return [erp_inv_dt, 0.0, cfm_gain];
+    }
+
+    applySpringForce(spring: SimuloSpring) {
+        // spring has 2 rapier rigidbodies etc, we will addForce(
+
+        // distance between spring.bodyA.translation() and bodyB's
+        const pointAWorld = spring.bodyA.translation();
+        const pointBWorld = spring.bodyB.translation();
+
+        // solve distance constraint with Gauss-Siedel method
+        const currentLength = this.distance(pointAWorld, pointBWorld);
+        const difference = (currentLength - spring.targetLength) / currentLength;
+        const springForce = this.multiply(this.sub(pointAWorld, pointBWorld), difference * spring.stiffness);
+
+        // add spring force to both bodies
+        spring.bodyA.addForce(this.multiply(springForce, -1), true);
     }
 }
 

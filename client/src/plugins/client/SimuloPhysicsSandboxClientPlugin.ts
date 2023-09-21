@@ -17,25 +17,43 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     controller: SimuloClientController;
     viewer: SimuloViewerPIXI;
 
+    async generateCursor(color: string) {
+        // ok so basically
+        // the cursor is an svg with some colors to replace to create a custom cursor
+        let cursorSVG = await (await fetch('./assets/textures/cursor_new.svg')).text();
+        cursorSVG = cursorSVG.replace(/#ff0000/g, color);
+        cursorSVG = cursorSVG.replace(/#0000ff/g, color === '#000000' ? '#ffffff' : '#000000');
+        // create a data url from the svg
+        let cursorDataURL = 'data:image/svg+xml;base64,' + btoa(cursorSVG);
+        // set body cursor
+        document.body.style.cursor = `url("${cursorDataURL}") 8 3, auto`;
+    }
+
     constructor(controller: SimuloClientController) {
         this.controller = controller;
         this.viewer = new SimuloViewerPIXI();
-        this.viewer.on('pointerdown', (e) => {
-            // at clientx and y, emit a player_down event
-            console.log('down at ' + e.globalX + ', ' + e.globalY)
-            let global = this.viewer.viewport.toWorld(e.globalX, e.globalY);
-            this.controller.emit('player_down', { x: global.x, y: -global.y });
+
+        this.viewer.on('pointerdown', (e: { point: { x: number, y: number }, event: any }) => {
+            if (e.event.button === 0) {
+                this.controller.emit('player_down', e.point);
+            }
         });
-        this.viewer.on('pointermove', (e) => {
-            // at clientx and y, emit a player_move event
-            let global = this.viewer.viewport.toWorld(e.globalX, e.globalY);
-            this.controller.emit('player_move', { x: global.x, y: -global.y });
+        this.viewer.on('pointermove', (e: { point: { x: number, y: number }, event: any }) => {
+            this.controller.emit('player_move', e.point);
         });
+        this.viewer.on('pointerup', (e: { point: { x: number, y: number }, event: any }) => {
+            if (e.event.button === 0) {
+                this.controller.emit('player_up', e.point);
+            }
+        });
+
         let renderLoop = () => {
             this.viewer.render();
             requestAnimationFrame(renderLoop);
         }
         requestAnimationFrame(renderLoop);
+
+        this.generateCursor('#000000');
     }
 
     destroy(): void { }

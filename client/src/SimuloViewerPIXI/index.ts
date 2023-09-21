@@ -42,15 +42,35 @@ export default class SimuloViewerPIXI {
         });
 
         this.scene.addChild(this.viewport as any);
-        this.viewport.drag().pinch().wheel().decelerate();
+        this.viewport.drag({
+            mouseButtons: "middle-right",
+        }).pinch().wheel().decelerate();
         this.viewport.on("pointermove", (e) => {
-            if (this.listeners["pointermove"]) this.listeners["pointermove"].forEach((callback) => callback(e));
+            if (this.listeners["pointermove"]) {
+                let point = this.viewport.toWorld(e.globalX, e.globalY);
+                this.listeners["pointermove"].forEach((callback) => callback({
+                    event: e,
+                    point: { x: point.x, y: -point.y },
+                }));
+            }
         });
         this.viewport.on("pointerdown", (e) => {
-            if (this.listeners["pointerdown"]) this.listeners["pointerdown"].forEach((callback) => callback(e));
+            if (this.listeners["pointerdown"]) {
+                let point = this.viewport.toWorld(e.globalX, e.globalY);
+                this.listeners["pointerdown"].forEach((callback) => callback({
+                    event: e,
+                    point: { x: point.x, y: -point.y },
+                }));
+            }
         });
         this.viewport.on("pointerup", (e) => {
-            if (this.listeners["pointerup"]) this.listeners["pointerup"].forEach((callback) => callback(e));
+            if (this.listeners["pointerup"]) {
+                let point = this.viewport.toWorld(e.globalX, e.globalY);
+                this.listeners["pointerup"].forEach((callback) => callback({
+                    event: e,
+                    point: { x: point.x, y: -point.y },
+                }));
+            }
         });
 
         let me = this;
@@ -74,12 +94,27 @@ export default class SimuloViewerPIXI {
         });
     }
 
+    springGFXs: PIXI.Graphics[] = []
+
     update(stepInfo: SimuloPhysicsStepInfo) {
         for (let key in stepInfo.delta.shapeContent) {
             let content = stepInfo.delta.shapeContent[key];
             this.addShape(content);
         }
         this.updatePositions(stepInfo.delta.shapeTransforms);
+        // draw a line for each spring
+        this.springGFXs.forEach((gfx) => {
+            this.viewport.removeChild(gfx)
+        });
+        this.springGFXs = []
+        stepInfo.springs.forEach((spring) => {
+            let gfx = new PIXI.Graphics();
+            gfx.lineStyle(0.1, '#ffffff')
+                .moveTo(spring.pointA.x, -spring.pointA.y)
+                .lineTo(spring.pointB.x, -spring.pointB.y);
+            this.springGFXs.push(gfx)
+            this.viewport.addChild(gfx);
+        })
     }
 
     render() {
@@ -126,6 +161,14 @@ export default class SimuloViewerPIXI {
     }
 
     addShape(content: ShapeContentData) {
+        if (this.coll2gfx.has(content.id)) {
+            // remove it
+            let gfx = this.coll2gfx.get(content.id);
+            if (gfx) {
+                this.viewport.removeChild(gfx);
+            }
+        }
+
         let gfx = new PIXI.Graphics();
         switch (content.type) {
             case "rectangle":
