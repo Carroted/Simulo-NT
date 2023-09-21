@@ -78,7 +78,6 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
 
             // player_down fires when primary input is pressed, such as mouse left click
             if (event === 'player_down') {
-                // i forgoy
                 console.log('down received')
                 let target = this.physicsPlugin.physicsServer.getObjectAtPoint(data.x, data.y);
                 this.physicsPlugin.physicsServer.groundBody!.setTranslation({ x: data.x, y: data.y }, true);
