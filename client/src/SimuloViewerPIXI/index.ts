@@ -77,6 +77,7 @@ export default class SimuloViewerPIXI {
 
         function onWindowResize() {
             me.renderer.resize(window.innerWidth, window.innerHeight);
+            me.viewport.resize(window.innerWidth, window.innerHeight);
         }
 
         function onContextMenu(event: UIEvent) {
@@ -101,6 +102,7 @@ export default class SimuloViewerPIXI {
             let content = stepInfo.delta.shapeContent[key];
             this.addShape(content);
         }
+        if (Object.keys(stepInfo.delta.shapeContent).length > 0) console.log('registered ' + Object.keys(stepInfo.delta.shapeContent).length + ' shapes')
         this.updatePositions(stepInfo.delta.shapeTransforms);
         // draw a line for each spring
         this.springGFXs.forEach((gfx) => {
@@ -213,7 +215,7 @@ export default class SimuloViewerPIXI {
                 break;
         }
 
-        console.log('registered shape')
+        //console.log('registered shape')
 
         this.coll2gfx.set(content.id, gfx);
         this.viewport.addChild(gfx);
