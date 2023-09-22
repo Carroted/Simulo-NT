@@ -46,8 +46,10 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         let cursorDataURL = 'data:image/svg+xml;base64,' + btoa(cursorSVG);
 
         // set body cursor
-        document.body.style.cursor = `url("${cursorDataURL}") 8 3, auto`;
+        document.body.style.setProperty('cursor', `url("${cursorDataURL}") 6 2, auto`, 'important');
     }
+
+    toolBar: HTMLDivElement;
 
     constructor(controller: SimuloClientController) {
         this.controller = controller;
@@ -76,15 +78,50 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         requestAnimationFrame(renderLoop);
 
         this.setColorCursor('./assets/textures/cursor_new.svg', '#000000');
+
+        let toolBar = document.createElement('div');
+        toolBar.className = 'toolbar';
+        toolBar.style.display = 'none';
+        this.toolBar = document.body.appendChild(toolBar);
     }
 
     destroy(): void { } // for now, nothing in destroy. in the future, this should properly dispose of everything cleanly
+
+    async updateToolBar(tools: {
+        name: string,
+        icon: string,
+        description: string,
+        id: string
+    }[]) {
+        this.toolBar.style.display = 'flex';
+        this.toolBar.innerHTML = '';
+        for (let tool of tools) {
+            const toolElement = document.createElement('div');
+            toolElement.innerHTML = await this.fetchSVG(tool.icon);
+            toolElement.addEventListener('click', (e) => {
+                this.controller.emit('player_tool', tool.id);
+            });
+            this.toolBar.appendChild(toolElement);
+        }
+    }
 
     handleIncomingEvent(event: string, data: any): void {
         if (event === 'physics_step') {
             // the world has updated, let's update the viewer with the new data
             let stepInfo = data as SimuloPhysicsStepInfo;
             this.viewer.update(stepInfo);
+        }
+        if (event === 'tools') {
+            let tools = data as {
+                name: string,
+                icon: string,
+                description: string,
+                id: string
+            }[];
+            this.updateToolBar(tools);
+        }
+        if (event === 'player_tool_success') {
+            alert('changed')
         }
     }
     handleOutgoingEvent(event: string, data: any): void { } // nothing here

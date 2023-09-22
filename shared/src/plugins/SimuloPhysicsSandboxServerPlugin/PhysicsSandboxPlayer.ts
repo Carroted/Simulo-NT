@@ -7,4 +7,5 @@ export default interface PhysicsSandboxPlayer {
     color: number;
     /** If primary input is held down, usually left mouse */
     down: boolean;
+    tool: string; // everyone always has a tool selected
 }

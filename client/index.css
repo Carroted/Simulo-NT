@@ -2,15 +2,61 @@
     box-sizing: border-box;
     padding: 0;
     margin: 0;
+    user-select: none;
 }
 
+:root,
 html,
 body {
-    width: 100%;
-    height: 100%;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
     overflow: hidden;
 }
 
 html {
     background: linear-gradient(180deg, #0f1130 0%, #553f90 180%);
+}
+
+/* semi-bold */
+@font-face {
+    font-family: 'Urbanist';
+    font-style: normal;
+    font-weight: 400;
+    src: url('assets/fonts/Urbanist-SemiBold.woff2') format('woff2');
+}
+
+.toolbar {
+    position: fixed;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    color: #ffffff50;
+    font-family: "Urbanist", sans-serif;
+    font-size: 1.2em;
+    padding: 0.5em 0.7em;
+    z-index: 100;
+    border-radius: 0.9375rem;
+    /* according to a super cool stackoverflower i now lost, this is the best way to force hardware acceleration. i found a pretty good performance boost with this with my backdrop-filter blur */
+    -webkit-backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    -webkit-transform: translate3d(0, 0, 0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000;
+    transform: translate3d(0, 0, 0);
+    transform: translateZ(0);
+    background: #03081dc0;
+    backdrop-filter: blur(35px);
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.toolbar svg {
+    height: 2rem;
+    fill: #ffffff50;
 }
