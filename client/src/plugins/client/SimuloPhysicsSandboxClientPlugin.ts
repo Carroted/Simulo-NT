@@ -49,7 +49,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         document.body.style.setProperty('cursor', `url("${cursorDataURL}") 6 2, auto`, 'important');
     }
 
-    toolBar: HTMLDivElement;
+    utilityBar: HTMLDivElement;
 
     constructor(controller: SimuloClientController) {
         this.controller = controller;
@@ -79,29 +79,36 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
 
         this.setColorCursor('./assets/textures/cursor_new.svg', '#000000');
 
-        let toolBar = document.createElement('div');
-        toolBar.className = 'toolbar';
-        toolBar.style.display = 'none';
-        this.toolBar = document.body.appendChild(toolBar);
+        let utilityBar = document.createElement('div');
+        utilityBar.className = 'toolbar primary';
+        utilityBar.style.display = 'none';
+        this.utilityBar = document.body.appendChild(utilityBar);
     }
 
     destroy(): void { } // for now, nothing in destroy. in the future, this should properly dispose of everything cleanly
+
+    toolElements: { [id: string]: HTMLDivElement } = {};
 
     async updateToolBar(tools: {
         name: string,
         icon: string,
         description: string,
         id: string
-    }[]) {
-        this.toolBar.style.display = 'flex';
+    }[], toolID: string) {
+        this.utilityBar.style.display = 'flex';
         this.toolBar.innerHTML = '';
+        this.toolElements = {};
         for (let tool of tools) {
             const toolElement = document.createElement('div');
+            toolElement.className = toolID === tool.id ? 'tool active' : 'tool';
             toolElement.innerHTML = await this.fetchSVG(tool.icon);
             toolElement.addEventListener('click', (e) => {
                 this.controller.emit('player_tool', tool.id);
             });
-            this.toolBar.appendChild(toolElement);
+            const toolElementBar = document.createElement('div');
+            toolElementBar.className = 'bar';
+            toolElement.appendChild(toolElementBar);
+            this.toolElements[tool.id] = this.toolBar.appendChild(toolElement);
         }
     }
 
@@ -112,16 +119,25 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
             this.viewer.update(stepInfo);
         }
         if (event === 'tools') {
-            let tools = data as {
+            let tools = data.tools as {
                 name: string,
                 icon: string,
                 description: string,
                 id: string
             }[];
-            this.updateToolBar(tools);
+            let tool = data.tool as string;
+            this.updateToolBar(tools, tool);
         }
         if (event === 'player_tool_success') {
-            alert('changed')
+            // reset all tools
+            Object.keys(this.toolElements).forEach(tool => {
+                if (data !== tool) {
+                    this.toolElements[tool].classList.remove('active');
+                }
+                else {
+                    this.toolElements[tool].classList.add('active');
+                }
+            });
         }
     }
     handleOutgoingEvent(event: string, data: any): void { } // nothing here

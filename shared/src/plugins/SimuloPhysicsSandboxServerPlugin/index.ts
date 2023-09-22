@@ -69,7 +69,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 color: 0xffffff,
                 id,
                 down: false,
-                tool: "cubes"
+                tool: "drag"
             }
         }
 
@@ -106,7 +106,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
             if (event === 'player_tool') {
                 this.players[id].tool = data.toString();
                 console.log('changed tool to', data);
-                this.controller.emit('player_tool_success', 'Changed tool', id);
+                this.controller.emit('player_tool_success', data, id);
             }
         }
     }

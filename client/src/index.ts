@@ -35,7 +35,10 @@ client.on('data', (data: { event: string, data: any }) => {
     server.handleIncomingEvent(data.event, data.data, "local");
 });
 
-client.handleIncomingEvent("tools", physicsSandboxServerPlugin.getTools());
+client.handleIncomingEvent("tools", {
+    tools: physicsSandboxServerPlugin.getTools(),
+    tool: 'drag'
+});
 
 console.log('Starting...')
 server.startLoop();

@@ -35,9 +35,10 @@ html {
     color: #ffffff50;
     font-family: "Urbanist", sans-serif;
     font-size: 1.2em;
-    padding: 0.5em 0.7em;
+    padding: 0 0.7em;
     z-index: 100;
     border-radius: 0.9375rem;
+    height: 3.5rem;
     /* according to a super cool stackoverflower i now lost, this is the best way to force hardware acceleration. i found a pretty good performance boost with this with my backdrop-filter blur */
     -webkit-backface-visibility: hidden;
     -webkit-perspective: 1000;
@@ -53,10 +54,89 @@ html {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    gap: 0.2rem;
+}
+
+.toolbar .tool {
+    width: 2.8rem;
+    height: 2.8rem;
+    padding: 0.5rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
 }
 
 .toolbar svg {
-    height: 2rem;
-    fill: #ffffff50;
+    width: 100%;
+    height: 100%;
+    fill: #e0ddff40;
+}
+
+.toolbar img {
+    width: 100%;
+    height: 100%;
+}
+
+.toolbar .tool svg {
+    flex-grow: 0;
+    flex-shrink: 0;
+    transition: all 0.1s ease-in-out;
+}
+
+.toolbar .tool:hover svg {
+    fill: #ddddddb0;
+    filter: drop-shadow(0px 0px 20px #ffffffa0);
+}
+
+.toolbar .tool:active svg {
+    fill: #ffffff;
+    filter: drop-shadow(0px 0px 15px #ffffffa0);
+}
+
+.toolbar .tool.active svg {
+    fill: #ffffff;
+    filter: drop-shadow(0px 0px 10px #ffffffa0);
+}
+
+.toolbar.primary .tool .bar {
+    background: #ffffff;
+    /* round top, not bottom */
+    border-radius: 0.2rem 0.2rem 0 0;
+    height: 0.3rem;
+    width: 0.4rem;
+    opacity: 0;
+    position: absolute;
+    bottom: 0;
+    flex-grow: 0;
+    flex-shrink: 0;
+    transition: all 0.1s ease-in-out;
+}
+
+.toolbar.primary .tool:hover .bar {
+    width: 0.9rem;
+    opacity: 0.8;
+}
+
+.toolbar.primary .tool:active .bar {
+    width: 1.2rem;
+    opacity: 1;
+}
+
+.toolbar.primary .tool.active .bar {
+    width: 1.2rem;
+    opacity: 1;
+    filter: drop-shadow(0px 0px 10px #ffffffa0);
+}
+
+.toolbar.primary .tool {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+.toolbar.primary .tool svg {
+    height: 1.8rem;
+    width: 1.8rem;
 }
