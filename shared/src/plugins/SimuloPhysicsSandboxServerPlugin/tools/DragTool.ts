@@ -38,11 +38,11 @@ export default class DragTool implements PhysicsSandboxTool {
                     },
                     applyBodyBImpulse: (impulse, worldPoint) => { },
 
-                    stiffness: 1,
+                    stiffness: 110,
                     localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA.translation(), bodyA.rotation(), { x: player.x, y: player.y }),
                     localAnchorB: { x: 0, y: 0 },
                     targetLength: 0,
-                    damping: 1
+                    damping: 2
                 });
             }
         }
