@@ -22,6 +22,10 @@ export default class DragTool implements PhysicsSandboxTool {
             let bodyANullable = target.parent();
             if (bodyANullable !== null) {
                 let bodyA = bodyANullable;
+                if (this.spring) {
+                    this.spring.destroy();
+                    this.spring = null;
+                }
                 this.spring = this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
                     // positions
                     getBodyAPosition: () => { return bodyA.translation() },

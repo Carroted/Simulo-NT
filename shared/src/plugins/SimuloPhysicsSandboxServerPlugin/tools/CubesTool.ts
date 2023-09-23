@@ -2,6 +2,8 @@ import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 
+import randomColor from "../../../randomColor";
+
 export default class CubesTool implements PhysicsSandboxTool {
     name = "Cubes";
     description = "Test tool to spam spawn cubes";
@@ -17,10 +19,10 @@ export default class CubesTool implements PhysicsSandboxTool {
         this.physicsSandbox.physicsPlugin.physicsServer.addRectangle({
             width: 0.5,
             height: 0.5,
-            color: 0xff5520,
+            color: randomColor(),
             alpha: 1,
             name: "Cube",
-            border: 0x000000,
+            border: null,
             borderScaleWithZoom: true,
             borderWidth: 0.1,
             image: null,

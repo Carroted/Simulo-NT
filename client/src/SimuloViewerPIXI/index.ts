@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import { OutlineFilter } from '@pixi/filter-outline';
 import { Viewport } from "pixi-viewport";
 import type { Circle, Polygon, Rectangle, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerRapier";
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
@@ -251,6 +252,9 @@ export default class SimuloViewerPIXI {
 
     renderShape(content: ShapeContentData) {
         let gfx = new PIXI.Graphics();
+        if (content.border !== null) {
+            gfx.lineStyle(1, content.border, 0.5, 0, true);
+        }
         gfx.alpha = content.alpha;
         switch (content.type) {
             case "rectangle":
@@ -273,12 +277,36 @@ export default class SimuloViewerPIXI {
                 break;
             case "circle":
                 let circle = content as Circle;
-                gfx.scale.x = circle.radius;
-                gfx.scale.y = circle.radius;
+
                 gfx.beginFill(circle.color);
                 //gfx.drawCircle(0, 0, 1);
-                // arc manually since circle doesnt have enough segments
-                gfx.arc(0, 0, 1, 0, Math.PI * 2);
+                // arc manually, we will use startAngle and whatnot
+                /*let segments = 4;
+                let size = 2 * Math.PI / segments;
+                for (let i = 0; i < segments; i++) {
+                    gfx.moveTo(0, 0);
+                    gfx.arc(0, 0, circle.radius, size * i, size * (i + 1));
+                }*/
+                //gfx.drawCircle(0, 0, circle.radius);
+
+                // no arc
+                let segments = 50;
+                let size = 2 * Math.PI / segments;
+                // start at top
+                gfx.moveTo(0, circle.radius);
+                for (let i = 0; i < segments; i++) {
+                    gfx.lineTo(Math.sin(size * i) * circle.radius, Math.cos(size * i) * circle.radius);
+                }
+                gfx.lineTo(0, circle.radius);
+
+                gfx.endFill();
+
+                // "circle cake", 15deg dark slice
+                gfx.lineStyle(0);
+                gfx.beginFill(0x000000, 0.5);
+                gfx.moveTo(0, 0);
+                gfx.arc(0, 0, circle.radius, -Math.PI / 16, Math.PI / 16);
+                gfx.lineTo(0, 0);
                 gfx.endFill();
                 break;
             case "polygon":

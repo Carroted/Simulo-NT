@@ -79,8 +79,9 @@ export default class RectangleTool implements PhysicsSandboxTool {
                     alpha: 0.5,
                     zDepth: 0,
                     type: "rectangle",
-                    border: 0x000000,
-                    id: "rectangleToolOverlay"
+                    border: 0xffffff,
+                    id: "rectangleToolOverlay",
+                    borderWidth: 0.1,
                 } as Rectangle,
                 transform: {
                     x: (this.startPoint.x + player.x) / 2,

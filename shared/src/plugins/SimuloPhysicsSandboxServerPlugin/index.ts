@@ -124,7 +124,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 color: 0xffffff,
                 id,
                 down: false,
-                tool: "rectangle"
+                tool: "drag"
             }
         }
 

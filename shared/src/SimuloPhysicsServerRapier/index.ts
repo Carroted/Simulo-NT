@@ -12,6 +12,7 @@ interface ShapeContentData {
     /** 0-1 alpha */
     alpha: number;
     border: number | null;
+    borderWidth: number | null;
 }
 
 interface Polygon extends ShapeContentData {
@@ -28,6 +29,7 @@ interface Rectangle extends ShapeContentData {
 interface Circle extends ShapeContentData {
     type: "circle";
     radius: number;
+    circleCake: boolean;
 }
 
 /** Translation and rotation to apply to a shape. Scale is not included in this (and is instead in `ShapeContentData`) since it rarely changes, unlike position and rotation, which usually change every frame. */
@@ -315,6 +317,7 @@ class SimuloPhysicsServerRapier {
             alpha: bodyData.alpha,
             border: border,
             id: bodyData.id,
+            borderWidth: bodyData.borderWidth,
         };
 
         switch (shape.type) {
@@ -397,7 +400,7 @@ class SimuloPhysicsServerRapier {
             height: 500,
             color: 0xa1acfa,
             alpha: 1,
-            border: 0xffffff,
+            border: null,
             name: 'joe',
             sound: 'test',
             borderWidth: 1,
@@ -415,7 +418,7 @@ class SimuloPhysicsServerRapier {
             width: 5, height: 1,
             color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
             alpha: 1,
-            border: 0xffffff,
+            border: null,
             name: 'joe',
             sound: 'test',
             borderWidth: 1,
@@ -433,7 +436,7 @@ class SimuloPhysicsServerRapier {
             width: 1, height: 1,
             color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
             alpha: 1,
-            border: 0xffffff,
+            border: null,
             name: 'joe',
             sound: 'test',
             borderWidth: 1,
@@ -451,7 +454,7 @@ class SimuloPhysicsServerRapier {
             radius: 3,
             color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
             alpha: 1,
-            border: 0xffffff,
+            border: null,
             name: 'joe',
             sound: 'test',
             borderWidth: 1,
