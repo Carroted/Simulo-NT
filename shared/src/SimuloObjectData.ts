@@ -7,6 +7,8 @@ interface SimuloObjectData {
     sound: string | null;
     /** Color number like 0xffffff */
     color: number;
+    /** 0-1 alpha */
+    alpha: number;
     /** Color number or null for no border */
     border: number | null;
     borderWidth: number | null;

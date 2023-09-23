@@ -13,6 +13,8 @@ export default interface PhysicsSandboxTool {
     playerMove(player: PhysicsSandboxPlayer): void;
     /** When player releases primary input with this tool selected, or when they switch tools or leave the room while holding down primary input */
     playerUp(player: PhysicsSandboxPlayer): void;
-    /** Fires on world update. */
+    /** Fires on world update.
+     * 
+     * If your tool renders custom overlays on screen, you should re-add them each time with `physicsSandbox.addOverlayShape` and `physicsSandbox.addOverlayText`. We server-side render tools, and those overlays will be sent to all clients. */
     update(player: PhysicsSandboxPlayer): void;
 }

@@ -2,7 +2,7 @@ import type SimuloClientPlugin from "../../SimuloClientPlugin";
 import type SimuloClientController from "../../SimuloClientController";
 import type PhysicsSandboxPlayer from "../../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/PhysicsSandboxPlayer";
 import SimuloViewerPIXI from "../../SimuloViewerPIXI";
-import type { SimuloPhysicsStepInfo } from "../../../../shared/src/SimuloPhysicsServerRapier";
+import type WorldUpdate from "../../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 
 /** This will manage tools and UI for Physics Sandbox client-side */
 
@@ -50,6 +50,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     }
 
     utilityBar: HTMLDivElement;
+    toolBar: HTMLDivElement;
 
     constructor(controller: SimuloClientController) {
         this.controller = controller;
@@ -80,9 +81,15 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         this.setColorCursor('./assets/textures/cursor_new.svg', '#000000');
 
         let utilityBar = document.createElement('div');
-        utilityBar.className = 'toolbar primary';
+        utilityBar.className = 'bar utilities';
         utilityBar.style.display = 'none';
+        utilityBar.innerHTML = 'coming soon (real)';
         this.utilityBar = document.body.appendChild(utilityBar);
+
+        let toolBar = document.createElement('div');
+        toolBar.className = 'bar tools';
+        toolBar.style.display = 'none';
+        this.toolBar = document.body.appendChild(toolBar);
     }
 
     destroy(): void { } // for now, nothing in destroy. in the future, this should properly dispose of everything cleanly
@@ -96,6 +103,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         id: string
     }[], toolID: string) {
         this.utilityBar.style.display = 'flex';
+        this.toolBar.style.display = 'flex';
         this.toolBar.innerHTML = '';
         this.toolElements = {};
         for (let tool of tools) {
@@ -105,18 +113,18 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
             toolElement.addEventListener('click', (e) => {
                 this.controller.emit('player_tool', tool.id);
             });
-            const toolElementBar = document.createElement('div');
-            toolElementBar.className = 'bar';
-            toolElement.appendChild(toolElementBar);
+            const toolElementLine = document.createElement('div');
+            toolElementLine.className = 'line';
+            toolElement.appendChild(toolElementLine);
             this.toolElements[tool.id] = this.toolBar.appendChild(toolElement);
         }
     }
 
     handleIncomingEvent(event: string, data: any): void {
-        if (event === 'physics_step') {
+        if (event === 'world_update') {
             // the world has updated, let's update the viewer with the new data
-            let stepInfo = data as SimuloPhysicsStepInfo;
-            this.viewer.update(stepInfo);
+            let worldUpdate = data as WorldUpdate;
+            this.viewer.update(worldUpdate);
         }
         if (event === 'tools') {
             let tools = data.tools as {

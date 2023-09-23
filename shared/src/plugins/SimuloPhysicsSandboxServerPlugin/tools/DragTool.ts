@@ -1,6 +1,7 @@
 import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
+import { SimuloSpring } from "../../../SimuloPhysicsServerRapier";
 
 export default class DragTool implements PhysicsSandboxTool {
     name = "Drag";
@@ -8,6 +9,8 @@ export default class DragTool implements PhysicsSandboxTool {
     icon = "icons/cursor-default.svg";
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
+
+    spring: SimuloSpring | null = null;
 
     constructor(physicsSandbox: SimuloPhysicsSandboxServerPlugin) {
         this.physicsSandbox = physicsSandbox;
@@ -19,7 +22,7 @@ export default class DragTool implements PhysicsSandboxTool {
             let bodyANullable = target.parent();
             if (bodyANullable !== null) {
                 let bodyA = bodyANullable;
-                this.physicsSandbox.physicsPlugin.physicsServer.springs.push({
+                this.spring = this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
                     // positions
                     getBodyAPosition: () => { return bodyA.translation() },
                     getBodyBPosition: () => { return { x: player.x, y: player.y } },
@@ -38,26 +41,28 @@ export default class DragTool implements PhysicsSandboxTool {
                     },
                     applyBodyBImpulse: (impulse, worldPoint) => { },
 
-                    stiffness: 110,
+                    stiffness: 10,
                     localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA.translation(), bodyA.rotation(), { x: player.x, y: player.y }),
                     localAnchorB: { x: 0, y: 0 },
                     targetLength: 0,
-                    damping: 2
+                    damping: 1
                 });
             }
         }
     }
     playerMove(player: PhysicsSandboxPlayer) {
         if (!player.down) return;
+        if (!this.spring) return;
 
-        this.physicsSandbox.physicsPlugin.physicsServer.springs.forEach(spring => {
-            spring.getBodyBPosition = () => {
-                return { x: player.x, y: player.y };
-            };
-        });
+        this.spring.getBodyBPosition = () => {
+            return { x: player.x, y: player.y };
+        };
     }
     playerUp(player: PhysicsSandboxPlayer) {
-        this.physicsSandbox.physicsPlugin.physicsServer.springs = [];
+        if (!this.spring) return;
+
+        this.spring.destroy();
+        this.spring = null;
     }
     update(player: PhysicsSandboxPlayer) { }
 }

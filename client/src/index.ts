@@ -31,7 +31,6 @@ server.on('data', (data: { event: string, data: any }) => {
 client.on('data', (data: { event: string, data: any }) => {
     //console.log('Server got data')
     // any emitted client data is instantly handled on server
-    console.log('emitting event')
     server.handleIncomingEvent(data.event, data.data, "local");
 });
 

@@ -6,6 +6,12 @@ import PhysicsSandboxTool from "./PhysicsSandboxTool";
 
 import DragTool from "./tools/DragTool";
 import CubesTool from "./tools/CubesTool";
+import type { SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerRapier";
+
+import type WorldUpdate from "./WorldUpdate";
+import type OverlayShape from "./OverlayShape";
+import type OverlayText from "./OverlayText";
+import RectangleTool from "./tools/RectangleTool";
 
 export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlugin {
     name = "Simulo Physics Sandbox Server Plugin";
@@ -22,7 +28,8 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
 
     builtInTools: { [id: string]: PhysicsSandboxTool } = {
         "drag": new DragTool(this),
-        "cubes": new CubesTool(this)
+        "cubes": new CubesTool(this),
+        "rectangle": new RectangleTool(this)
     };
 
     getTools(): {
@@ -42,6 +49,45 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
         });
     }
 
+    /** Overlays are cleared each frame, and sent alongside each `world_update`. */
+    overlayShapes: OverlayShape[] = [];
+    /** Overlays are cleared each frame, and sent alongside each `world_update`. */
+    overlayTexts: OverlayText[] = [];
+
+    /** Physics Sandbox supports server-side rendering overlays each frame. This can be used for tools.
+     * 
+     * If you want to use this, you should call this function each frame with the shapes you want to render, since we clear the overlays each frame.
+     * 
+     * For instance, while drawing a rectangle, we can show a preview of what it'll look like on the client, with dimensions and color.
+     * 
+     * Overlays are sent alongside each `world_update` event. */
+    addOverlayShape(shape: OverlayShape): number {
+        let length = this.overlayShapes.push(shape);
+        // return index of shape
+        return length - 1;
+    }
+
+    /** Physics Sandbox supports server-side rendering overlays each frame. This can be used for tools.
+     * 
+     * If you want to use this, you should call this function each frame with the texts you want to render, since we clear the overlays each frame.
+     * 
+     * For instance, when dragging an object, we can show the drag force.
+     * 
+     * Overlays are sent alongside each `world_update` event. */
+    addOverlayText(text: OverlayText) {
+        let length = this.overlayTexts.push(text);
+        // return index of text
+        return length - 1;
+    }
+
+    removeOverlayShape(index: number) {
+        this.overlayShapes.splice(index, 1);
+    }
+
+    removeOverlayText(index: number) {
+        this.overlayTexts.splice(index, 1);
+    }
+
     constructor(controller: SimuloServerController, physicsPlugin: SimuloPhysicsPlugin) {
         this.controller = controller;
         this.physicsPlugin = physicsPlugin;
@@ -50,8 +96,17 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
     update(): void {
         // emit the the physics previousStep
         if (this.physicsPlugin.previousStepInfo) {
-            this.controller.emit('physics_step', this.physicsPlugin.previousStepInfo, null);
+            this.controller.emit('world_update', {
+                ...this.physicsPlugin.previousStepInfo,
+                overlays: {
+                    shapes: this.overlayShapes,
+                    texts: this.overlayTexts
+                }
+            } as WorldUpdate, null);
         }
+        // clear overlays
+        this.overlayShapes = [];
+        this.overlayTexts = [];
         // fire tool update events for all players
         Object.keys(this.players).forEach(playerId => {
             if (this.builtInTools[this.players[playerId].tool]) {
@@ -69,7 +124,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 color: 0xffffff,
                 id,
                 down: false,
-                tool: "drag"
+                tool: "rectangle"
             }
         }
 

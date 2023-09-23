@@ -1,12 +1,16 @@
 import RAPIER from "@dimforge/rapier2d-compat";
 import type Rapier from "@dimforge/rapier2d-compat";
 
+import randomColor from "../randomColor";
+
 import SimuloObjectData from "../SimuloObjectData";
 
 interface ShapeContentData {
     id: string;
     type: "rectangle" | "circle" | "polygon" | "line";
     color: number;
+    /** 0-1 alpha */
+    alpha: number;
     border: number | null;
 }
 
@@ -52,7 +56,7 @@ interface SimuloPhysicsStepInfo {
  * 
  * Since you provide your own functions like `getBodyAPosition`, this is general-purpose, and you can do things like attach one end to a mouse cursor. */
 
-interface SimuloSpring {
+interface SimuloSpringDesc {
     getBodyAPosition: () => Rapier.Vector2;
     getBodyBPosition: () => Rapier.Vector2;
 
@@ -78,11 +82,172 @@ interface SimuloSpring {
     targetLength: number;
 }
 
+/** Interactive class for Simulo spring */
+class SimuloSpring {
+    readonly id: string;
+    private desc: SimuloSpringDesc;
+    private server: SimuloPhysicsServerRapier;
+    constructor(server: SimuloPhysicsServerRapier, desc: SimuloSpringDesc, id: string) {
+        this.id = id;
+        this.desc = desc;
+        this.server = server;
+    }
+    get targetLength(): number {
+        return this.desc.targetLength;
+    }
+    set targetLength(value: number) {
+        this.desc.targetLength = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get damping(): number {
+        return this.desc.damping;
+    }
+    set damping(value: number) {
+        this.desc.damping = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get stiffness(): number {
+        return this.desc.stiffness;
+    }
+    set stiffness(value: number) {
+        this.desc.stiffness = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get localAnchorA(): { x: number, y: number } {
+        return this.desc.localAnchorA;
+    }
+    set localAnchorA(value: { x: number, y: number }) {
+        this.desc.localAnchorA = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get localAnchorB(): { x: number, y: number } {
+        return this.desc.localAnchorB;
+    }
+    set localAnchorB(value: { x: number, y: number }) {
+        this.desc.localAnchorB = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get getBodyAPosition(): () => { x: number, y: number } {
+        return this.desc.getBodyAPosition;
+    }
+    set getBodyAPosition(value: () => { x: number, y: number }) {
+        this.desc.getBodyAPosition = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get getBodyBPosition(): () => { x: number, y: number } {
+        return this.desc.getBodyBPosition;
+    }
+    set getBodyBPosition(value: () => { x: number, y: number }) {
+        this.desc.getBodyBPosition = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get getBodyARotation(): () => number {
+        return this.desc.getBodyARotation;
+    }
+    set getBodyARotation(value: () => number) {
+        this.desc.getBodyARotation = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get getBodyBRotation(): () => number {
+        return this.desc.getBodyBRotation;
+    }
+    set getBodyBRotation(value: () => number) {
+        this.desc.getBodyBRotation = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get getBodyAVelocity(): () => { x: number, y: number } {
+        return this.desc.getBodyAVelocity;
+    }
+    set getBodyAVelocity(value: () => { x: number, y: number }) {
+        this.desc.getBodyAVelocity = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get getBodyBVelocity(): () => { x: number, y: number } {
+        return this.desc.getBodyBVelocity;
+    }
+    set getBodyBVelocity(value: () => { x: number, y: number }) {
+        this.desc.getBodyBVelocity = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get applyBodyAImpulse(): (impulse: { x: number, y: number }, worldPoint: { x: number, y: number }) => void {
+        return this.desc.applyBodyAImpulse;
+    }
+    set applyBodyAImpulse(value: (impulse: { x: number, y: number }, worldPoint: { x: number, y: number }) => void) {
+        this.desc.applyBodyAImpulse = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    get applyBodyBImpulse(): (impulse: { x: number, y: number }, worldPoint: { x: number, y: number }) => void {
+        return this.desc.applyBodyBImpulse;
+    }
+    set applyBodyBImpulse(value: (impulse: { x: number, y: number }, worldPoint: { x: number, y: number }) => void) {
+        this.desc.applyBodyBImpulse = value;
+        if (this.server.springs[this.id]) {
+            this.server.springs[this.id] = this.desc;
+        }
+    }
+    destroy() {
+        delete this.server.springs[this.id];
+    }
+}
+
 /** The spring data needed for rendering */
 
 interface SimuloSpringInfo {
     pointA: { x: number, y: number };
     pointB: { x: number, y: number };
+}
+
+interface BaseShapeData {
+    /** If none is provided, one will automatically be generated. If you provide this, it should always be in a container, there's no reason to supply one on root.
+     * 
+     * Good example of when to supply this: you are loading saved objects within a container.
+     * 
+     * Bad example of supplying this: you are creating a new object and giving it ID "ground". This is bad usage, IDs should always be like `/0`, `/34/1993`, etc. */
+    id?: string;
+    name: string | undefined;
+    /** Path to a sound file for collisions. Relative to /assets/sounds/ */
+    sound: string | null;
+    /** Color number like 0xffffff */
+    color: number;
+    /** 0-1 alpha */
+    alpha: number;
+    /** Color number or null for no border */
+    border: number | null;
+    borderWidth: number | null;
+    borderScaleWithZoom: boolean;
+    image: string | null;
+    /** We sort shapes with this for almost everything, including rendering. Newer shapes get a higher Z Depth. At the start of a scene, IDs and Z Depths will be the same, but user interaction can change this. */
+    zDepth: number;
+    flipImage?: boolean;
+    position: { x: number, y: number },
+    isStatic: boolean,
+    friction: number,
+    restitution: number,
+    density: number,
 }
 
 class SimuloPhysicsServerRapier {
@@ -110,51 +275,30 @@ class SimuloPhysicsServerRapier {
         }
     }
 
-    /** Random hex number like `0xffffff` */
-    randomColor(hueMin: number, hueMax: number, saturationMin: number, saturationMax: number, valueMin: number, valueMax: number): number {
-        let hue = hueMin + Math.random() * (hueMax - hueMin);
-        let saturation = saturationMin + Math.random() * (saturationMax - saturationMin);
-        let value = valueMin + Math.random() * (valueMax - valueMin);
-        return this.hsvToHex(hue, saturation, value);
+    currentIDs: { [container: string]: number } = {};
+
+    /** Get a unique ID in a container. This will just be the previous number plus one. */
+    getID(container: string, absolute: boolean = true): string {
+        if (!this.currentIDs[container]) {
+            this.currentIDs[container] = 0;
+        }
+        let id = this.currentIDs[container];
+        // console.log('Allocated ID `' + container + id + '`');
+        this.currentIDs[container]++;
+        if (absolute) {
+            return container + id;
+        }
+        return id.toString();
     }
 
-    /** HSV (0-1) to hex number like `0xffffff` */
-    hsvToHex(h: number, s: number, v: number): number {
-        let r, g, b;
-        let i = Math.floor(h * 6);
-        let f = h * 6 - i;
-        let p = v * (1 - s);
-        let q = v * (1 - f * s);
-        let t = v * (1 - (1 - f) * s);
-        switch (i % 6) {
-            case 0:
-                (r = v), (g = t), (b = p);
-                break;
-            case 1:
-                (r = q), (g = v), (b = p);
-                break;
-            case 2:
-                (r = p), (g = v), (b = t);
-                break;
-            case 3:
-                (r = p), (g = q), (b = v);
-                break;
-            case 4:
-                (r = t), (g = p), (b = v);
-                break;
-            case 5:
-                (r = v), (g = p), (b = q);
-                break;
-        }
-        r = r ?? 0.5;
-        g = g ?? 0.5;
-        b = b ?? 0.5;
-        return parseInt(
-            "0x" +
-            Math.floor(r * 255).toString(16) +
-            Math.floor(g * 255).toString(16) +
-            Math.floor(b * 255).toString(16)
-        );
+    /** Simulo uses virtual springs with impulses applied each frame, since Rapier doesn't have built-in springs */
+    springs: { [id: string]: SimuloSpringDesc } = {};
+
+    /** Add a spring */
+    addSpring(spring: SimuloSpringDesc): SimuloSpring {
+        let id = this.getID("/");
+        this.springs[id] = spring;
+        return new SimuloSpring(this, spring, id);
     }
 
     getShapeContent(collider: Rapier.Collider): ShapeContentData | null {
@@ -168,6 +312,7 @@ class SimuloPhysicsServerRapier {
         let baseShape: ShapeContentData = {
             type: "rectangle",
             color: color,
+            alpha: bodyData.alpha,
             border: border,
             id: bodyData.id,
         };
@@ -233,9 +378,6 @@ class SimuloPhysicsServerRapier {
         return transforms;
     }
 
-    /** Simulo uses virtual springs with impulses applied each frame, since Rapier doesn't have built-in springs */
-    springs: SimuloSpring[] = [];
-
     /** There is no constructor, but that's fine since you can set this before calling `init` */
     gravity: { x: number; y: number } = { x: 0, y: -9.81 };
 
@@ -253,17 +395,15 @@ class SimuloPhysicsServerRapier {
         let groundPlane = this.addRectangle({
             width: 1000,
             height: 500,
-            data: {
-                id: "ground",
-                color: 0xa1acfa,
-                border: 0xffffff,
-                name: 'joe',
-                sound: 'test',
-                borderWidth: 1,
-                borderScaleWithZoom: true,
-                image: null,
-                zDepth: 0,
-            },
+            color: 0xa1acfa,
+            alpha: 1,
+            border: 0xffffff,
+            name: 'joe',
+            sound: 'test',
+            borderWidth: 1,
+            borderScaleWithZoom: true,
+            image: null,
+            zDepth: 0,
             position: { x: 0, y: -510 },
             isStatic: true,
             friction: 0.5,
@@ -273,17 +413,15 @@ class SimuloPhysicsServerRapier {
 
         let bodyA = this.addRectangle({
             width: 5, height: 1,
-            data: {
-                id: "springboxA",
-                color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-                border: 0xffffff,
-                name: 'joe',
-                sound: 'test',
-                borderWidth: 1,
-                borderScaleWithZoom: true,
-                image: null,
-                zDepth: 0,
-            },
+            color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+            alpha: 1,
+            border: 0xffffff,
+            name: 'joe',
+            sound: 'test',
+            borderWidth: 1,
+            borderScaleWithZoom: true,
+            image: null,
+            zDepth: 0,
             position: { x: -3, y: 10 },
             isStatic: false,
             friction: 0.5,
@@ -293,17 +431,15 @@ class SimuloPhysicsServerRapier {
 
         let bodyB = this.addRectangle({
             width: 1, height: 1,
-            data: {
-                id: "springboxB",
-                color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-                border: 0xffffff,
-                name: 'joe',
-                sound: 'test',
-                borderWidth: 1,
-                borderScaleWithZoom: true,
-                image: null,
-                zDepth: 0,
-            },
+            color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+            alpha: 1,
+            border: 0xffffff,
+            name: 'joe',
+            sound: 'test',
+            borderWidth: 1,
+            borderScaleWithZoom: true,
+            image: null,
+            zDepth: 0,
             position: { x: 5, y: 5 },
             isStatic: false,
             friction: 0.5,
@@ -313,17 +449,15 @@ class SimuloPhysicsServerRapier {
 
         let bodyC = this.addCircle({
             radius: 3,
-            data: {
-                id: "springcirclelmao",
-                color: this.randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-                border: 0xffffff,
-                name: 'joe',
-                sound: 'test',
-                borderWidth: 1,
-                borderScaleWithZoom: true,
-                image: null,
-                zDepth: 0,
-            },
+            color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+            alpha: 1,
+            border: 0xffffff,
+            name: 'joe',
+            sound: 'test',
+            borderWidth: 1,
+            borderScaleWithZoom: true,
+            image: null,
+            zDepth: 0,
             position: { x: 0, y: 0 },
             isStatic: false,
             friction: 0.5,
@@ -333,16 +467,12 @@ class SimuloPhysicsServerRapier {
     }
 
     /** multiple gon */
-    addPolygon(polygon: {
+    addPolygon(polygon: BaseShapeData & {
         points: { x: number, y: number }[],
-        data: SimuloObjectData,
-        position: { x: number, y: number },
-        isStatic: boolean,
-        friction: number,
-        restitution: number,
-        density: number,
     }) {
         if (!this.world) { throw new Error('init world first'); }
+
+        let id = polygon.id ?? this.getID("/");
 
         let bodyDesc = polygon.isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
 
@@ -351,7 +481,18 @@ class SimuloPhysicsServerRapier {
             polygon.position.y
         );
 
-        bodyDesc.setUserData(polygon.data);
+        bodyDesc.setUserData({
+            id,
+            color: polygon.color,
+            alpha: polygon.alpha,
+            border: polygon.border,
+            name: polygon.name,
+            sound: polygon.sound,
+            borderWidth: polygon.borderWidth,
+            borderScaleWithZoom: polygon.borderScaleWithZoom,
+            image: polygon.image,
+            zDepth: polygon.zDepth,
+        });
 
         let body = this.world.createRigidBody(bodyDesc);
 
@@ -369,30 +510,39 @@ class SimuloPhysicsServerRapier {
         this.colliders.push(coll);
         let content = this.getShapeContent(coll);
         if (content) {
-            this.changedContents[polygon.data.id] = content;
+            this.changedContents[id] = content;
         }
 
         return coll;
     }
 
-    addRectangle(rectangle: {
+    addRectangle(rectangle: BaseShapeData & {
         width: number,
         height: number,
-        data: SimuloObjectData,
-        position: { x: number, y: number }
-        isStatic: boolean,
-        friction: number,
-        restitution: number,
-        density: number,
     }) {
         if (!this.world) { throw new Error('init world first'); }
+
+        let id = rectangle.id ?? this.getID("/");
+
         let bodyDesc = rectangle.isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
         bodyDesc = bodyDesc.setTranslation(
             rectangle.position.x,
             rectangle.position.y
         );
 
-        bodyDesc.setUserData(rectangle.data);
+        bodyDesc.setUserData({
+            id,
+            color: rectangle.color,
+            alpha: rectangle.alpha,
+            border: rectangle.border,
+            name: rectangle.name,
+            sound: rectangle.sound,
+            borderWidth: rectangle.borderWidth,
+            borderScaleWithZoom: rectangle.borderScaleWithZoom,
+            image: rectangle.image,
+            zDepth: rectangle.zDepth,
+        });
+
         let body = this.world.createRigidBody(bodyDesc);
         // no collide
         let colliderDesc = RAPIER.ColliderDesc.cuboid(rectangle.width, rectangle.height).setRestitution(rectangle.restitution).setFriction(rectangle.friction).setDensity(rectangle.density);
@@ -401,29 +551,38 @@ class SimuloPhysicsServerRapier {
         this.colliders.push(coll);
         let content = this.getShapeContent(coll);
         if (content) {
-            this.changedContents[rectangle.data.id] = content;
+            this.changedContents[id] = content;
         }
 
         return coll;
     }
 
-    addCircle(circle: {
+    addCircle(circle: BaseShapeData & {
         radius: number,
-        data: SimuloObjectData,
-        position: { x: number, y: number },
-        isStatic: boolean,
-        friction: number,
-        restitution: number,
-        density: number,
     }) {
         if (!this.world) { throw new Error('init world first'); }
+
+        let id = circle.id ?? this.getID("/");
+
         let bodyDesc = circle.isStatic ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic();
         bodyDesc = bodyDesc.setTranslation(
             circle.position.x,
             circle.position.y
         );
 
-        bodyDesc.setUserData(circle.data);
+        bodyDesc.setUserData({
+            id,
+            color: circle.color,
+            alpha: circle.alpha,
+            border: circle.border,
+            name: circle.name,
+            sound: circle.sound,
+            borderWidth: circle.borderWidth,
+            borderScaleWithZoom: circle.borderScaleWithZoom,
+            image: circle.image,
+            zDepth: circle.zDepth,
+        });
+
         let body = this.world.createRigidBody(bodyDesc);
         // no collide
         let colliderDesc = RAPIER.ColliderDesc.ball(circle.radius).setRestitution(circle.restitution).setFriction(circle.friction).setDensity(circle.density);
@@ -432,7 +591,7 @@ class SimuloPhysicsServerRapier {
         this.colliders.push(coll);
         let content = this.getShapeContent(coll);
         if (content) {
-            this.changedContents[circle.data.id] = content;
+            this.changedContents[id] = content;
         }
 
         return coll;
@@ -442,7 +601,7 @@ class SimuloPhysicsServerRapier {
         if (!this.world) { throw new Error('init world first'); }
 
         let before = new Date().getTime();
-        this.springs.forEach((spring) => {
+        Object.values(this.springs).forEach((spring) => {
             this.applySpringForce(spring);
         });
         this.world.step();
@@ -456,7 +615,7 @@ class SimuloPhysicsServerRapier {
                 shapeTransforms: this.getShapeTransforms(), // this should be changed to a delta since lots of bodies are sleeping
             },
             ms: new Date().getTime() - before,
-            springs: this.springs.map((spring) => {
+            springs: Object.values(this.springs).map((spring) => {
                 let pointA = this.getWorldPoint(spring.getBodyAPosition(), spring.getBodyARotation(), spring.localAnchorA);
                 let pointB = this.getWorldPoint(spring.getBodyBPosition(), spring.getBodyBRotation(), spring.localAnchorB);
                 return {
@@ -560,7 +719,7 @@ class SimuloPhysicsServerRapier {
         return new RAPIER.Vector2(worldX, worldY);
     }
 
-    applySpringForce(spring: SimuloSpring) {
+    applySpringForce(spring: SimuloSpringDesc) {
         const pointAWorld = this.getWorldPoint(spring.getBodyAPosition(), spring.getBodyARotation(), spring.localAnchorA);
         const pointBWorld = this.getWorldPoint(spring.getBodyBPosition(), spring.getBodyBRotation(), spring.localAnchorB);
 
@@ -587,4 +746,4 @@ class SimuloPhysicsServerRapier {
 }
 
 export default SimuloPhysicsServerRapier;
-export type { ShapeContentData, Polygon, Rectangle, Circle, ShapeTransformData, SimuloPhysicsStepInfo };
+export type { ShapeContentData, Polygon, Rectangle, Circle, ShapeTransformData, SimuloPhysicsStepInfo, SimuloSpring };

@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import { Viewport } from "pixi-viewport";
-import type { Circle, Polygon, Rectangle, ShapeContentData, ShapeTransformData, SimuloPhysicsStepInfo } from "../../../shared/src/SimuloPhysicsServerRapier";
+import type { Circle, Polygon, Rectangle, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerRapier";
+import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 
 PIXI.curves.adaptive = false;
 
@@ -178,33 +179,46 @@ export default class SimuloViewerPIXI {
         });
     }
 
-    springGFXs: PIXI.Graphics[] = []
+    /** Graphics that are cleared and redrawn each frame, as they are expected to change every frame. */
+    tempGFXs: PIXI.Graphics[] = []
 
-    update(stepInfo: SimuloPhysicsStepInfo) {
-        for (let key in stepInfo.delta.shapeContent) {
-            let content = stepInfo.delta.shapeContent[key];
+    update(worldUpdate: WorldUpdate) {
+        for (let key in worldUpdate.delta.shapeContent) {
+            let content = worldUpdate.delta.shapeContent[key];
             this.addShape(content);
         }
-        if (Object.keys(stepInfo.delta.shapeContent).length > 0) console.log('registered ' + Object.keys(stepInfo.delta.shapeContent).length + ' shapes')
-        this.updatePositions(stepInfo.delta.shapeTransforms);
+        if (Object.keys(worldUpdate.delta.shapeContent).length > 0) console.log('registered ' + Object.keys(worldUpdate.delta.shapeContent).length + ' shapes')
+        this.updatePositions(worldUpdate.delta.shapeTransforms);
         // draw a line for each spring, will soon support images
-        this.springGFXs.forEach((gfx) => {
+        this.tempGFXs.forEach((gfx) => {
             this.viewport.removeChild(gfx)
         });
-        this.springGFXs = []
-        stepInfo.springs.forEach((spring) => {
+        this.tempGFXs = []
+        worldUpdate.springs.forEach((spring) => {
             let gfx = new PIXI.Graphics();
             gfx.lineStyle(3 / this.viewport.scale.y, '#ffffff')
                 .moveTo(spring.pointA.x, -spring.pointA.y)
                 .lineTo(spring.pointB.x, -spring.pointB.y);
-            this.springGFXs.push(gfx)
+            this.tempGFXs.push(gfx)
             this.viewport.addChild(gfx);
-        })
+        });
+        worldUpdate.overlays.shapes.forEach((shape) => {
+            let content = shape.content;
+            let transform = shape.transform;
+            let gfx = this.renderShape(content);
+            gfx.position.x = transform.x;
+            gfx.position.y = -transform.y;
+            gfx.rotation = -transform.angle;
+            this.tempGFXs.push(gfx);
+            this.viewport.addChild(gfx);
+        });
+        worldUpdate.overlays.texts.forEach((text) => {
+            // coming soon lol
+        });
     }
 
     render() {
         this.renderer.render(this.scene);
-
     }
 
     lookAt(pos: { zoom: number; target: { x: number; y: number } }) {
@@ -235,16 +249,9 @@ export default class SimuloViewerPIXI {
         this.coll2gfx = new Map();
     }
 
-    addShape(content: ShapeContentData) {
-        if (this.coll2gfx.has(content.id)) {
-            // remove it so we dont get ghost shapes
-            let gfx = this.coll2gfx.get(content.id);
-            if (gfx) {
-                this.viewport.removeChild(gfx);
-            }
-        }
-
+    renderShape(content: ShapeContentData) {
         let gfx = new PIXI.Graphics();
+        gfx.alpha = content.alpha;
         switch (content.type) {
             case "rectangle":
                 let rectangle = content as Rectangle;
@@ -288,6 +295,20 @@ export default class SimuloViewerPIXI {
                 console.error("Unknown shape type: " + content.type);
                 break;
         }
+
+        return gfx;
+    }
+
+    addShape(content: ShapeContentData) {
+        if (this.coll2gfx.has(content.id)) {
+            // remove it so we dont get ghost shapes
+            let gfx = this.coll2gfx.get(content.id);
+            if (gfx) {
+                this.viewport.removeChild(gfx);
+            }
+        }
+
+        let gfx = this.renderShape(content);
 
         this.coll2gfx.set(content.id, gfx);
         this.viewport.addChild(gfx);
