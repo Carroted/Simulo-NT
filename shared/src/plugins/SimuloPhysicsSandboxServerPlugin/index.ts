@@ -12,6 +12,7 @@ import type WorldUpdate from "./WorldUpdate";
 import type OverlayShape from "./OverlayShape";
 import type OverlayText from "./OverlayText";
 import RectangleTool from "./tools/RectangleTool";
+import CircleTool from "./tools/CircleTool";
 
 export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlugin {
     name = "Simulo Physics Sandbox Server Plugin";
@@ -29,7 +30,8 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
     builtInTools: { [id: string]: PhysicsSandboxTool } = {
         "drag": new DragTool(this),
         "cubes": new CubesTool(this),
-        "rectangle": new RectangleTool(this)
+        "rectangle": new RectangleTool(this),
+        "circle": new CircleTool(this)
     };
 
     getTools(): {
