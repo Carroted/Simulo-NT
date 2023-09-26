@@ -18,29 +18,38 @@ export default class SimuloServerController {
         plugin.destroy();
         this.plugins.splice(this.plugins.indexOf(plugin), 1);
     }
-    runStarts() {
+    async runStarts() {
         for (let plugin of this.plugins) {
-            plugin.start();
+            try {
+                await plugin.start().catch((e: any) => { console.error(e); });
+            }
+            catch (e) { }
         }
     }
-    runUpdates() {
+    async runUpdates() {
         for (let plugin of this.plugins) {
-            plugin.update();
+            try {
+                await plugin.update().catch((e: any) => { console.error(e); });
+            }
+            catch (e) { }
         }
     }
-    destroy() {
+    async destroy() {
         for (let plugin of this.plugins) {
-            plugin.destroy();
+            try {
+                await plugin.destroy().catch((e: any) => { console.error(e); });
+            }
+            catch (e) { }
         }
     }
-    handleIncomingEvent(event: string, data: any, id: string) {
+    async handleIncomingEvent(event: string, data: any, id: string) {
         for (let plugin of this.plugins) {
-            plugin.handleIncomingEvent(event, data, id);
+            await plugin.handleIncomingEvent(event, data, id);
         }
     }
-    handleOutgoingEvent(event: string, data: any, id: string | null) {
+    async handleOutgoingEvent(event: string, data: any, id: string | null) {
         for (let plugin of this.plugins) {
-            plugin.handleOutgoingEvent(event, data, id);
+            await plugin.handleOutgoingEvent(event, data, id);
         }
     }
 
@@ -57,8 +66,8 @@ export default class SimuloServerController {
         this.listeners[event].splice(this.listeners[event].indexOf(callback), 1);
     }
 
-    emit(event: string, data: any, id: string | null) {
-        this.handleOutgoingEvent(event, data, id);
+    async emit(event: string, data: any, id: string | null) {
+        await this.handleOutgoingEvent(event, data, id);
         if (this.listeners[event]) {
             for (let callback of this.listeners[event]) {
                 callback(data);

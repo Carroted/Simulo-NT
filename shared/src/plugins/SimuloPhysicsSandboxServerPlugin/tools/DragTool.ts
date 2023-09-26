@@ -2,6 +2,7 @@ import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 import { SimuloSpring } from "../../../SimuloPhysicsServerRapier";
+import type SimuloObjectData from "../../../SimuloObjectData";
 
 export default class DragTool implements PhysicsSandboxTool {
     name = "Drag";
@@ -49,7 +50,11 @@ export default class DragTool implements PhysicsSandboxTool {
                     localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA.translation(), bodyA.rotation(), { x: player.x, y: player.y }),
                     localAnchorB: { x: 0, y: 0 },
                     targetLength: 0,
-                    damping: 1
+                    damping: 1,
+
+                    // ids
+                    bodyA: (bodyA.userData as SimuloObjectData).id,
+                    bodyB: null,
                 });
             }
         }

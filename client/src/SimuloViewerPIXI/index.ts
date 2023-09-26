@@ -216,6 +216,13 @@ export default class SimuloViewerPIXI {
         worldUpdate.overlays.texts.forEach((text) => {
             // coming soon lol
         });
+
+        worldUpdate.sounds.forEach((sound) => {
+            console.log('##### SOUND ####', sound);
+            let audio = new Audio(sound.sound);
+            audio.volume = sound.volume;
+            audio.play();
+        });
     }
 
     render() {

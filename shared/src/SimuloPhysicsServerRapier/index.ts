@@ -15,6 +15,11 @@ interface ShapeContentData {
     borderWidth: number | null;
 }
 
+interface CollisionSound {
+    sound: string;
+    volume: number;
+}
+
 interface Polygon extends ShapeContentData {
     type: "polygon";
     points: [x: number, y: number][];
@@ -52,6 +57,24 @@ interface SimuloPhysicsStepInfo {
 
     /** Spring rendering data */
     springs: SimuloSpringInfo[];
+
+    sounds: CollisionSound[];
+}
+
+interface SavedWorldState {
+    state: number[];
+    userDatas: { [handle: number]: SimuloObjectData };
+    currentIDs: { [container: string]: number };
+    springs: {
+        bodyA: string | null;
+        bodyB: string | null;
+        localAnchorA: { x: number, y: number };
+        localAnchorB: { x: number, y: number };
+        stiffness: number;
+        damping: number;
+        targetLength: number;
+        id: string;
+    }[];
 }
 
 /** Simulo creates fake spring joint with `applyImpulseAtPoint` on two bodies.
@@ -59,6 +82,9 @@ interface SimuloPhysicsStepInfo {
  * Since you provide your own functions like `getBodyAPosition`, this is general-purpose, and you can do things like attach one end to a mouse cursor. */
 
 interface SimuloSpringDesc {
+    bodyA: string | null;
+    bodyB: string | null;
+
     getBodyAPosition: () => Rapier.Vector2;
     getBodyBPosition: () => Rapier.Vector2;
 
@@ -402,7 +428,7 @@ class SimuloPhysicsServerRapier {
             alpha: 1,
             border: null,
             name: 'joe',
-            sound: 'test',
+            sound: '/assets/sounds/impact.wav',
             borderWidth: 1,
             borderScaleWithZoom: true,
             image: null,
@@ -420,7 +446,7 @@ class SimuloPhysicsServerRapier {
             alpha: 1,
             border: null,
             name: 'joe',
-            sound: 'test',
+            sound: '/assets/sounds/impact.wav',
             borderWidth: 1,
             borderScaleWithZoom: true,
             image: null,
@@ -438,7 +464,7 @@ class SimuloPhysicsServerRapier {
             alpha: 1,
             border: null,
             name: 'joe',
-            sound: 'test',
+            sound: '/assets/sounds/impact.wav',
             borderWidth: 1,
             borderScaleWithZoom: true,
             image: null,
@@ -456,7 +482,7 @@ class SimuloPhysicsServerRapier {
             alpha: 1,
             border: null,
             name: 'joe',
-            sound: 'test',
+            sound: '/assets/sounds/impact.wav',
             borderWidth: 1,
             borderScaleWithZoom: true,
             image: null,
@@ -507,7 +533,8 @@ class SimuloPhysicsServerRapier {
             throw new Error('Failed to create collider');
         }
 
-        colliderDesc = colliderDesc.setRestitution(polygon.restitution).setFriction(polygon.friction).setDensity(polygon.density);
+        colliderDesc = colliderDesc.setRestitution(polygon.restitution).setFriction(polygon.friction).setDensity(polygon.density)
+            .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
         let coll = this.world.createCollider(colliderDesc!, body);
 
         this.colliders.push(coll);
@@ -548,7 +575,8 @@ class SimuloPhysicsServerRapier {
 
         let body = this.world.createRigidBody(bodyDesc);
         // no collide
-        let colliderDesc = RAPIER.ColliderDesc.cuboid(rectangle.width, rectangle.height).setRestitution(rectangle.restitution).setFriction(rectangle.friction).setDensity(rectangle.density);
+        let colliderDesc = RAPIER.ColliderDesc.cuboid(rectangle.width, rectangle.height).setRestitution(rectangle.restitution).setFriction(rectangle.friction).setDensity(rectangle.density)
+            .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
         let coll = this.world.createCollider(colliderDesc!, body);
 
         this.colliders.push(coll);
@@ -588,7 +616,8 @@ class SimuloPhysicsServerRapier {
 
         let body = this.world.createRigidBody(bodyDesc);
         // no collide
-        let colliderDesc = RAPIER.ColliderDesc.ball(circle.radius).setRestitution(circle.restitution).setFriction(circle.friction).setDensity(circle.density);
+        let colliderDesc = RAPIER.ColliderDesc.ball(circle.radius).setRestitution(circle.restitution).setFriction(circle.friction).setDensity(circle.density)
+            .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
         let coll = this.world.createCollider(colliderDesc!, body);
 
         this.colliders.push(coll);
@@ -600,6 +629,8 @@ class SimuloPhysicsServerRapier {
         return coll;
     }
 
+    eventQueue: RAPIER.EventQueue | null = null;
+
     step(): SimuloPhysicsStepInfo {
         if (!this.world) { throw new Error('init world first'); }
 
@@ -607,7 +638,36 @@ class SimuloPhysicsServerRapier {
         Object.values(this.springs).forEach((spring) => {
             this.applySpringForce(spring);
         });
-        this.world.step();
+        if (!this.eventQueue) {
+            this.eventQueue = new RAPIER.EventQueue(true);
+        }
+
+        this.world.step(this.eventQueue);
+
+        let sounds: CollisionSound[] = [];
+
+        this.eventQueue.drainContactForceEvents(e => {
+            console.log(e.totalForceMagnitude);
+            let colliderA = this.world?.getCollider(e.collider1());
+            let colliderB = this.world?.getCollider(e.collider2());
+            let bodyA = colliderA?.parent();
+            let bodyB = colliderB?.parent();
+            let userDataA = bodyA?.userData as SimuloObjectData;
+            let userDataB = bodyB?.userData as SimuloObjectData;
+            let magnitude = e.totalForceMagnitude() / 100000;
+            if (userDataA.sound) {
+                sounds.push({
+                    sound: userDataA.sound,
+                    volume: magnitude,
+                });
+            }
+            if (userDataB.sound) {
+                sounds.push({
+                    sound: userDataB.sound,
+                    volume: magnitude,
+                });
+            }
+        });
 
         let changed = this.changedContents;
         this.changedContents = {};
@@ -625,7 +685,8 @@ class SimuloPhysicsServerRapier {
                     pointA: { x: pointA.x, y: pointA.y },
                     pointB: { x: pointB.x, y: pointB.y },
                 }
-            })
+            }),
+            sounds: sounds,
         };
     }
 
@@ -644,7 +705,11 @@ class SimuloPhysicsServerRapier {
         this.colliders.forEach((collider) => {
             let content = this.getShapeContent(collider);
             if (content) {
+                console.log('got of ID "' + content.id + '"')
                 contents[content.id] = content;
+            }
+            else {
+                console.log('no content for collider', collider);
             }
         });
         return contents;
@@ -745,6 +810,134 @@ class SimuloPhysicsServerRapier {
 
         spring.applyBodyAImpulse(forceOnA, pointAWorld);
         spring.applyBodyBImpulse(forceOnB, pointBWorld);
+    }
+
+    saveScene(): SavedWorldState {
+        if (!this.world) { throw new Error('init world first'); }
+        let state: Uint8Array = this.world.takeSnapshot();
+        if (!state) {
+            throw new Error('Failed to save scene');
+        }
+        let userDatas: {
+            [handle: number]: SimuloObjectData;
+        } = Object.fromEntries(this.colliders.map((collider) => {
+            let parent = collider.parent();
+            if (!parent) return null;
+            let userData = parent.userData as SimuloObjectData;
+            return [parent.handle, userData];
+        }).filter((x) => x != null) as [number, SimuloObjectData][]);
+
+        return {
+            state: Array.from(state),
+            userDatas,
+            currentIDs: this.currentIDs,
+            springs: Object.keys(this.springs).map((id) => {
+                return {
+                    bodyA: this.springs[id].bodyA,
+                    bodyB: this.springs[id].bodyB,
+                    localAnchorA: this.springs[id].localAnchorA,
+                    localAnchorB: this.springs[id].localAnchorB,
+                    stiffness: this.springs[id].stiffness,
+                    damping: this.springs[id].damping,
+                    targetLength: this.springs[id].targetLength,
+                    id,
+                }
+            })
+        };
+    }
+
+    getObjectByID(id: string): Rapier.RigidBody | null {
+        if (!this.world) { throw new Error('init world first'); }
+        let bodies = this.world.bodies.getAll();
+        let body = bodies.find((body) => {
+            let userData = body.userData as SimuloObjectData;
+            return userData.id === id;
+        });
+
+        return body ?? null;
+    }
+
+    /** Real */
+    async initFromSaved(scene: SavedWorldState) {
+        await RAPIER.init();
+
+        let state = scene.state;
+
+        this.world = RAPIER.World.restoreSnapshot(Uint8Array.from(state));
+
+        this.colliders = this.world.colliders.getAll();
+
+        // restore user data
+        this.colliders.forEach((collider) => {
+            let parent = collider.parent();
+            if (!parent) return;
+            let userData = scene.userDatas[parent.handle];
+            if (!userData) return;
+            parent.userData = userData;
+        });
+
+        this.changedContents = this.getShapeContents();
+
+        this.currentIDs = scene.currentIDs;
+
+        // add springs manually so we can use the right IDs
+        scene.springs.forEach((spring) => {
+            let bodyA: RAPIER.RigidBody | null = null;
+            let bodyB: RAPIER.RigidBody | null = null;
+            if (spring.bodyA) {
+                bodyA = this.getObjectByID(spring.bodyA);
+            }
+            if (spring.bodyB) {
+                bodyB = this.getObjectByID(spring.bodyB);
+            }
+
+            this.springs[spring.id] = {
+                bodyA: spring.bodyA,
+                bodyB: spring.bodyB,
+
+                stiffness: spring.stiffness,
+                damping: spring.damping,
+                targetLength: spring.targetLength,
+
+                localAnchorA: spring.localAnchorA,
+                localAnchorB: spring.localAnchorB,
+
+                getBodyAPosition: () => {
+                    if (bodyA == null) return { x: 0, y: 0 };
+                    return bodyA.translation();
+                },
+                getBodyBPosition: () => {
+                    if (bodyB == null) return { x: 0, y: 0 };
+                    return bodyB.translation();
+                },
+                getBodyARotation: () => {
+                    if (bodyA == null) return 0;
+                    return bodyA.rotation();
+                },
+                getBodyBRotation: () => {
+                    if (bodyB == null) return 0;
+                    return bodyB.rotation();
+                },
+                getBodyAVelocity: () => {
+                    if (bodyA == null) return { x: 0, y: 0 };
+                    return bodyA.linvel();
+                },
+                getBodyBVelocity: () => {
+                    if (bodyB == null) return { x: 0, y: 0 };
+                    return bodyB.linvel();
+                },
+                applyBodyAImpulse: (impulse: { x: number, y: number }, worldPoint: { x: number, y: number }) => {
+                    if (bodyA == null) return;
+                    bodyA.applyImpulseAtPoint(impulse, worldPoint, true);
+                },
+                applyBodyBImpulse: (impulse: { x: number, y: number }, worldPoint: { x: number, y: number }) => {
+                    if (bodyB == null) return;
+                    bodyB.applyImpulseAtPoint(impulse, worldPoint, true);
+                },
+
+
+            };
+        })
     }
 }
 

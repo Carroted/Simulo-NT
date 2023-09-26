@@ -90,6 +90,16 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         toolBar.className = 'bar tools';
         toolBar.style.display = 'none';
         this.toolBar = document.body.appendChild(toolBar);
+
+        //@ts-ignore
+        window.save = () => {
+            this.controller.emit('save', '');
+        };
+
+        //@ts-ignore
+        window.load = () => {
+            this.controller.emit('load', '');
+        };
     }
 
     destroy(): void { } // for now, nothing in destroy. in the future, this should properly dispose of everything cleanly

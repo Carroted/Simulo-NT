@@ -57,7 +57,7 @@ export default class RectangleTool implements PhysicsSandboxTool {
             borderScaleWithZoom: true,
             borderWidth: 0.1,
             image: null,
-            sound: null,
+            sound: "/assets/sounds/impact.wav",
             zDepth: 0,
             isStatic: false,
             density: 1,

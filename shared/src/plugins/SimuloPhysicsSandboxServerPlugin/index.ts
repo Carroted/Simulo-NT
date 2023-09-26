@@ -14,6 +14,7 @@ import type OverlayText from "./OverlayText";
 import RectangleTool from "./tools/RectangleTool";
 import CircleTool from "./tools/CircleTool";
 import CToolUbe from './tools/CToolUbe';
+import SimuloPhysicsServerRapier from "../../SimuloPhysicsServerRapier";
 
 export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlugin {
     name = "Simulo Physics Sandbox Server Plugin";
@@ -119,7 +120,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
         });
     }
     destroy(): void { }
-    handleIncomingEvent(event: string, data: any, id: string): void {
+    async handleIncomingEvent(event: string, data: any, id: string) {
         // here we handle incoming events from clients
         if (!this.players[id]) {
             this.players[id] = {
@@ -167,6 +168,16 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 console.log('changed tool to', data);
                 this.controller.emit('player_tool_success', data, id);
             }
+        }
+
+        if (event === 'save') {
+            localStorage.setItem('what the fu', JSON.stringify(this.physicsPlugin.physicsServer.saveScene()));
+        }
+
+        if (event === 'load') {
+            this.physicsPlugin.physicsServer.world = null;
+            this.physicsPlugin.physicsServer = new SimuloPhysicsServerRapier();
+            await this.physicsPlugin.physicsServer.initFromSaved(JSON.parse(localStorage.getItem('what the fu')!));
         }
     }
     handleOutgoingEvent(event: string, data: any, id: string | null): void { }
