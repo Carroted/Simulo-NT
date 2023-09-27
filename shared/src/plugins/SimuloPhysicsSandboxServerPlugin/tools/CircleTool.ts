@@ -1,7 +1,7 @@
 import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
-import type { Circle } from "../../../SimuloPhysicsServerRapier";
+import type { Ball } from "../../../SimuloPhysicsServerRapier";
 
 import randomColor from "../../../randomColor";
 
@@ -55,15 +55,16 @@ export default class CircleTool implements PhysicsSandboxTool {
                     color: this.color ?? 0xffffff,
                     alpha: 0.5,
                     zDepth: 0,
-                    type: "circle",
+                    type: "ball",
                     border: 0xffffff,
-                    id: "rectangleToolOverlay",
+                    id: "circleToolOverlay",
                     borderWidth: 0.1,
-                    circleCake: false,
-                } as Circle,
+                    cakeSlice: false,
+                } as Ball,
                 transform: {
                     x: (this.startPoint.x + player.x) / 2,
                     y: (this.startPoint.y + player.y) / 2,
+                    z: 0,
                     angle: 0,
                 }
             });

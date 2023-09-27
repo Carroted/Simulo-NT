@@ -75,7 +75,7 @@ export default class SimuloBrowserScriptSandbox implements SimuloServerPlugin {
             });
         });
         let diffs = await promise;
-        console.log('diffs', diffs);
+        //console.log('diffs', diffs);
         for (let id in diffs) {
             let obj = cachedObjects[id];
             let diff = diffs[id];
@@ -84,7 +84,7 @@ export default class SimuloBrowserScriptSandbox implements SimuloServerPlugin {
             }
         }
 
-        console.log('success in', window.performance.now() - then, 'ms');
+        //console.log('success in', window.performance.now() - then, 'ms');
     }
 
     addScript(script: string, id: number) {

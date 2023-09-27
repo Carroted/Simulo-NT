@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { OutlineFilter } from '@pixi/filter-outline';
 import { Viewport } from "pixi-viewport";
-import type { Circle, Polygon, Rectangle, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerRapier";
+import type { Ball, Polygon, Cuboid, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerRapier";
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 
 PIXI.curves.adaptive = false;
@@ -64,7 +64,37 @@ export default class SimuloViewerPIXI {
         }
     }
 
+    audioChannels: { [src: string]: HTMLAudioElement[] } = {};
+
+    playSound(src: string, volume: number) {
+        // we prepare 8 audio channels for each sound, we use inactive ones
+        if (!this.audioChannels[src]) {
+            this.audioChannels[src] = [];
+            for (let i = 0; i < 8; i++) {
+                let audio = new Audio(src);
+                this.audioChannels[src].push(audio);
+            }
+        }
+        // play the first inactive audio channel
+        let audio = this.audioChannels[src].find((audio) => audio.paused);
+        if (audio) {
+            // move back to start
+            audio.currentTime = 0;
+            audio.volume = volume;
+            audio.play();
+        }
+        else {
+            // if we cant find an inactive audio channel, we play the first one
+            this.audioChannels[src][0].currentTime = 0;
+            this.audioChannels[src][0].volume = volume;
+            this.audioChannels[src][0].play();
+        }
+    }
+
+
     constructor() {
+        this.audioChannels = {};
+
         // high pixel ratio makes the rendering extremely slow, so we cap it
         const pixelRatio = window.devicePixelRatio ? Math.min(window.devicePixelRatio, 1.5) : 1;
 
@@ -188,7 +218,7 @@ export default class SimuloViewerPIXI {
             let content = worldUpdate.delta.shapeContent[key];
             this.addShape(content);
         }
-        if (Object.keys(worldUpdate.delta.shapeContent).length > 0) console.log('registered ' + Object.keys(worldUpdate.delta.shapeContent).length + ' shapes')
+        //if (Object.keys(worldUpdate.delta.shapeContent).length > 0) console.log('registered ' + Object.keys(worldUpdate.delta.shapeContent).length + ' shapes')
         this.updatePositions(worldUpdate.delta.shapeTransforms);
         // draw a line for each spring, will soon support images
         this.tempGFXs.forEach((gfx) => {
@@ -218,10 +248,11 @@ export default class SimuloViewerPIXI {
         });
 
         worldUpdate.sounds.forEach((sound) => {
-            console.log('##### SOUND ####', sound);
-            let audio = new Audio(sound.sound);
+            //console.log('##### SOUND ####', sound);
+            /*let audio = new Audio(sound.sound);
             audio.volume = sound.volume;
-            audio.play();
+            audio.play();*/
+            //this.playSound(sound.sound, sound.volume);
         });
     }
 
@@ -264,8 +295,8 @@ export default class SimuloViewerPIXI {
         }
         gfx.alpha = content.alpha;
         switch (content.type) {
-            case "rectangle":
-                let rectangle = content as Rectangle;
+            case "cuboid":
+                let rectangle = content as Cuboid;
 
                 /*gfx.scale.x = rectangle.width;
                 gfx.scale.y = rectangle.height;
@@ -282,8 +313,8 @@ export default class SimuloViewerPIXI {
                 gfx.lineTo(-rectangle.width / 2, rectangle.height / 2);
                 gfx.endFill();
                 break;
-            case "circle":
-                let circle = content as Circle;
+            case "ball":
+                let circle = content as Ball;
 
                 gfx.beginFill(circle.color);
                 //gfx.drawCircle(0, 0, 1);

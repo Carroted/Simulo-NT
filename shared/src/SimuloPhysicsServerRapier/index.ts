@@ -7,7 +7,7 @@ import SimuloObjectData from "../SimuloObjectData";
 
 interface ShapeContentData {
     id: string;
-    type: "rectangle" | "circle" | "polygon" | "line";
+    type: "cuboid" | "ball" | "polygon" | "line";
     color: number;
     /** 0-1 alpha */
     alpha: number;
@@ -25,22 +25,24 @@ interface Polygon extends ShapeContentData {
     points: [x: number, y: number][];
 }
 
-interface Rectangle extends ShapeContentData {
-    type: "rectangle";
+interface Cuboid extends ShapeContentData {
+    type: "cuboid";
     width: number;
     height: number;
+    depth: number;
 }
 
-interface Circle extends ShapeContentData {
-    type: "circle";
+interface Ball extends ShapeContentData {
+    type: "ball";
     radius: number;
-    circleCake: boolean;
+    cakeSlice: boolean;
 }
 
 /** Translation and rotation to apply to a shape. Scale is not included in this (and is instead in `ShapeContentData`) since it rarely changes, unlike position and rotation, which usually change every frame. */
 interface ShapeTransformData {
     x: number;
     y: number;
+    z: number;
     angle: number;
 }
 
@@ -338,7 +340,7 @@ class SimuloPhysicsServerRapier {
         let border = bodyData.border;
 
         let baseShape: ShapeContentData = {
-            type: "rectangle",
+            type: "cuboid",
             color: color,
             alpha: bodyData.alpha,
             border: border,
@@ -352,11 +354,12 @@ class SimuloPhysicsServerRapier {
                 let halfExtents = cuboid.halfExtents;
                 let width = halfExtents.x * 2;
                 let height = halfExtents.y * 2;
-                let rect: Rectangle = {
+                let rect: Cuboid = {
                     ...baseShape,
-                    type: "rectangle",
+                    type: "cuboid",
                     width: width,
                     height: height,
+                    depth: 1,
                 };
                 return rect;
                 break;
@@ -365,9 +368,9 @@ class SimuloPhysicsServerRapier {
                 let radius = ball.radius;
                 return {
                     ...baseShape,
-                    type: "circle",
+                    type: "ball",
                     radius: radius,
-                } as Circle;
+                } as Ball;
                 break;
             case RAPIER.ShapeType.ConvexPolygon:
                 let polygon = shape as Rapier.ConvexPolygon;
@@ -401,6 +404,7 @@ class SimuloPhysicsServerRapier {
             transforms[data.id] = {
                 x: x,
                 y: y,
+                z: 0,
                 angle: angle,
             };
         });
@@ -440,59 +444,86 @@ class SimuloPhysicsServerRapier {
             density: 1,
         });
 
-        let bodyA = this.addRectangle({
-            width: 5, height: 1,
-            color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-            alpha: 1,
-            border: null,
-            name: 'joe',
-            sound: '/assets/sounds/impact.wav',
-            borderWidth: 1,
-            borderScaleWithZoom: true,
-            image: null,
-            zDepth: 0,
-            position: { x: -3, y: 10 },
-            isStatic: false,
-            friction: 0.5,
-            restitution: 0.5,
-            density: 1,
-        });
 
-        let bodyB = this.addRectangle({
-            width: 1, height: 1,
-            color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-            alpha: 1,
-            border: null,
-            name: 'joe',
-            sound: '/assets/sounds/impact.wav',
-            borderWidth: 1,
-            borderScaleWithZoom: true,
-            image: null,
-            zDepth: 0,
-            position: { x: 5, y: 5 },
-            isStatic: false,
-            friction: 0.5,
-            restitution: 0.5,
-            density: 1,
-        });
 
-        let bodyC = this.addCircle({
-            radius: 3,
-            color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-            alpha: 1,
-            border: null,
-            name: 'joe',
-            sound: '/assets/sounds/impact.wav',
-            borderWidth: 1,
-            borderScaleWithZoom: true,
-            image: null,
-            zDepth: 0,
-            position: { x: 0, y: 0 },
-            isStatic: false,
-            friction: 0.5,
-            restitution: 0.5,
-            density: 1,
-        });
+        {
+            // Create Ground.
+            let groundSize = 40.0;
+            let grounds = [
+                { x: 0.0, y: 0.0, hx: groundSize, hy: 0.1 },
+                { x: -groundSize, y: groundSize, hx: 0.1, hy: groundSize },
+                { x: groundSize, y: groundSize, hx: 0.1, hy: groundSize },
+            ];
+
+            grounds.forEach((ground) => {
+                /*let bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(
+                    ground.x,
+                    ground.y,
+                );
+                let body = world.createRigidBody(bodyDesc);
+                let colliderDesc = RAPIER.ColliderDesc.cuboid(ground.hx, ground.hy);
+                world.createCollider(colliderDesc, body);*/
+                this.addRectangle({
+                    width: ground.hx, height: ground.hy,
+                    color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
+                    alpha: 1,
+                    border: null,
+                    name: 'joe',
+                    sound: '/assets/sounds/impact.wav',
+                    borderWidth: 1,
+                    borderScaleWithZoom: true,
+                    image: null,
+                    zDepth: 0,
+                    position: { x: ground.x, y: ground.y },
+                    isStatic: true,
+                    friction: 0.5,
+                    restitution: 0,
+                    density: 1,
+                });
+            });
+
+            // Dynamic cubes.
+            let num = 20;
+            let numy = 50;
+            let rad = 1.0;
+
+            let shift = rad * 2.0 + rad;
+            let centerx = shift * (num / 2);
+            let centery = shift / 2.0;
+
+            let i, j;
+
+            for (j = 0; j < numy; ++j) {
+                for (i = 0; i < num; ++i) {
+                    let x = i * shift - centerx;
+                    let y = j * shift + centery + 3.0;
+
+                    /*
+                    // Create dynamic cube.
+                    let bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y);
+                    let body = world.createRigidBody(bodyDesc);
+                    let colliderDesc = RAPIER.ColliderDesc.cuboid(rad, rad);
+                    world.createCollider(colliderDesc, body);*/
+                    this.addRectangle({
+                        width: rad, height: rad,
+                        color: randomColor(0, 1, 0.3, 0.8, 0.4, 1),
+                        alpha: 1,
+                        border: null,
+                        name: 'joe',
+                        sound: '/assets/sounds/impact.wav',
+                        borderWidth: 1,
+                        borderScaleWithZoom: true,
+                        image: null,
+                        zDepth: 0,
+                        position: { x: x, y: y },
+                        isStatic: false,
+                        friction: 0.5,
+                        restitution: 0,
+                        density: 1,
+                    });
+                }
+            }
+        }
     }
 
     /** multiple gon */
@@ -647,7 +678,7 @@ class SimuloPhysicsServerRapier {
         let sounds: CollisionSound[] = [];
 
         this.eventQueue.drainContactForceEvents(e => {
-            console.log(e.totalForceMagnitude);
+            //console.log(e.totalForceMagnitude);
             let colliderA = this.world?.getCollider(e.collider1());
             let colliderB = this.world?.getCollider(e.collider2());
             let bodyA = colliderA?.parent();
@@ -942,4 +973,4 @@ class SimuloPhysicsServerRapier {
 }
 
 export default SimuloPhysicsServerRapier;
-export type { ShapeContentData, Polygon, Rectangle, Circle, ShapeTransformData, SimuloPhysicsStepInfo, SimuloSpring };
+export type { ShapeContentData, Polygon, Cuboid, Ball, ShapeTransformData, SimuloPhysicsStepInfo, SimuloSpring };
