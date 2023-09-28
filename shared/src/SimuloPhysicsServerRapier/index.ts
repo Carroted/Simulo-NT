@@ -359,7 +359,8 @@ class SimuloPhysicsServerRapier {
                     type: "cuboid",
                     width: width,
                     height: height,
-                    depth: 1,
+                    // the depth is the min of width and height, but max of 5
+                    depth: Math.min(Math.max(width, height), 5),
                 };
                 return rect;
                 break;

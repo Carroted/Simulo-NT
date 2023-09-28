@@ -8,13 +8,13 @@ import randomColor from "../../../randomColor";
 function randomRange(min: number, max: number): number {
     const range = max - min;
     return Math.random() * range + min;
-  }
+}
 
 
 export default class CToolUbe implements PhysicsSandboxTool {
     name = "CToolUbe";
     description = "Cube-inator";
-    icon = "icons/spring.svg";
+    icon = "icons/bug.svg";
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 
@@ -55,31 +55,31 @@ export default class CToolUbe implements PhysicsSandboxTool {
         let offsetY = randomRange(-5, 5);
 
         if (player.down) {
-                this.spawnCube(player.x + offsetX, player.y + offsetY);
- offsetX = randomRange(-5, 5);
-         offsetY = randomRange(-5, 5);
-this.spawnCube(player.x + offsetX, player.y + offsetY);
- offsetX = randomRange(-5, 5);
-         offsetY = randomRange(-5, 5);
-this.spawnCube(player.x + offsetX, player.y + offsetY);
- offsetX = randomRange(-5, 5);
-         offsetY = randomRange(-5, 5);
-this.spawnCube(player.x + offsetX, player.y + offsetY);
- offsetX = randomRange(-5, 5);
-         offsetY = randomRange(-5, 5);
-this.spawnCube(player.x + offsetX, player.y + offsetY);
- offsetX = randomRange(-5, 5);
-         offsetY = randomRange(-5, 5);
-this.spawnCube(player.x + offsetX, player.y + offsetY);
- offsetX = randomRange(-5, 5);
-         offsetY = randomRange(-5, 5);
-this.spawnCube(player.x + offsetX, player.y + offsetY);
- offsetX = randomRange(-5, 5);
-         offsetY = randomRange(-5, 5);
-this.spawnCube(player.x + offsetX, player.y + offsetY);
- offsetX = randomRange(-5, 5);
-         offsetY = randomRange(-5, 5);
-this.spawnCube(player.x + offsetX, player.y + offsetY);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
+            offsetX = randomRange(-5, 5);
+            offsetY = randomRange(-5, 5);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
+            offsetX = randomRange(-5, 5);
+            offsetY = randomRange(-5, 5);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
+            offsetX = randomRange(-5, 5);
+            offsetY = randomRange(-5, 5);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
+            offsetX = randomRange(-5, 5);
+            offsetY = randomRange(-5, 5);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
+            offsetX = randomRange(-5, 5);
+            offsetY = randomRange(-5, 5);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
+            offsetX = randomRange(-5, 5);
+            offsetY = randomRange(-5, 5);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
+            offsetX = randomRange(-5, 5);
+            offsetY = randomRange(-5, 5);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
+            offsetX = randomRange(-5, 5);
+            offsetY = randomRange(-5, 5);
+            this.spawnCube(player.x + offsetX, player.y + offsetY);
         }
         else {
             this.frameCount = 0;

@@ -2,6 +2,7 @@ import type SimuloClientPlugin from "../../SimuloClientPlugin";
 import type SimuloClientController from "../../SimuloClientController";
 import type PhysicsSandboxPlayer from "../../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/PhysicsSandboxPlayer";
 import SimuloViewerPIXI from "../../SimuloViewerPIXI";
+import SimuloViewerTHREE from "../../SimuloViewerTHREE";
 import type WorldUpdate from "../../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 
 /** This will manage tools and UI for Physics Sandbox client-side */
@@ -15,7 +16,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     id = "simulo-physics-sandbox-client-plugin";
     dependencies = [];
     controller: SimuloClientController;
-    viewer: SimuloViewerPIXI;
+    viewer: SimuloViewerTHREE;
 
     cachedImages: { [url: string]: any } = {}; // can store string for svg for example, or something else for rasters
 
@@ -54,12 +55,15 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
 
     constructor(controller: SimuloClientController) {
         this.controller = controller;
-        this.viewer = new SimuloViewerPIXI();
+        this.viewer = new SimuloViewerTHREE();
+        /*
+        this.viewer = new SimuloViewerPIXI();*/
 
         // listen to viewer events and emit them to the server in Physics Sandbox format
 
         this.viewer.on('pointerdown', (e: { point: { x: number, y: number }, event: any }) => {
             if (e.event.button === 0) {
+                console.log('down it goes at', e.point)
                 this.controller.emit('player_down', e.point);
             }
         });
@@ -68,17 +72,20 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         });
         this.viewer.on('pointerup', (e: { point: { x: number, y: number }, event: any }) => {
             if (e.event.button === 0) {
+                console.log('up it goes')
                 this.controller.emit('player_up', e.point);
             }
         });
+        /*
+                let renderLoop = () => {
+                    this.viewer.render();
+                    requestAnimationFrame(renderLoop);
+                }
+                requestAnimationFrame(renderLoop);*/
 
-        let renderLoop = () => {
-            this.viewer.render();
-            requestAnimationFrame(renderLoop);
-        }
-        requestAnimationFrame(renderLoop);
 
-        this.setColorCursor('./assets/textures/cursor_new.svg', '#000000');
+        //this.setColorCursor('./assets/textures/cursor_new.svg', '#000000');
+        document.body.style.cursor = 'none';
 
         let utilityBar = document.createElement('div');
         utilityBar.className = 'bar utilities';

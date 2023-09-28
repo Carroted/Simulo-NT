@@ -15,6 +15,7 @@ import RectangleTool from "./tools/RectangleTool";
 import CircleTool from "./tools/CircleTool";
 import CToolUbe from './tools/CToolUbe';
 import SimuloPhysicsServerRapier from "../../SimuloPhysicsServerRapier";
+import SpringTool from "./tools/SpringTool";
 
 export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlugin {
     name = "Simulo Physics Sandbox Server Plugin";
@@ -34,7 +35,8 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
         "cubes": new CubesTool(this),
         "rectangle": new RectangleTool(this),
         "circle": new CircleTool(this),
-        "cbues": new CToolUbe(this)
+        "cbues": new CToolUbe(this),
+        "spring": new SpringTool(this)
     };
 
     getTools(): {
