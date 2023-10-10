@@ -9,7 +9,7 @@ PIXI.curves.adaptive = false;
 
 interface GFX {
     selected: boolean;
-    gfx: SmoothGraphics;
+    gfx: SmoothGraphics | PIXI.Graphics;
 }
 /** Renderer in PIXI.js for Simulo. You can add shapes with `addShape`, and update their positions with `update`. */
 
@@ -216,7 +216,7 @@ export default class SimuloViewerPIXI {
     }
 
     /** Graphics that are cleared and redrawn each frame, as they are expected to change every frame. */
-    tempGFXs: SmoothGraphics[] = [];
+    tempGFXs: (SmoothGraphics | PIXI.Graphics)[] = [];
     shapeContents: { [id: string]: ShapeContentData } = {};
 
     update(worldUpdate: WorldUpdate) {
@@ -289,7 +289,7 @@ export default class SimuloViewerPIXI {
                     let gfx = this.renderShape({
                         ...content,
                         border: 0xffffff,
-                        borderWidth: 3 / this.viewport.scale.y
+                        borderWidth: 3
                     });
                     this.shapeContents[content.id] = content;
                     gfx.position.x = posX;
@@ -353,9 +353,13 @@ export default class SimuloViewerPIXI {
     }
 
     renderShape(content: ShapeContentData) {
-        let gfx = new SmoothGraphics();
+        let gfx: SmoothGraphics | PIXI.Graphics;
         if (content.border !== null) {
+            gfx = new SmoothGraphics();
             gfx.lineStyle(content.borderWidth ?? 1, content.border, 1, 0, LINE_SCALE_MODE.NONE);
+        }
+        else {
+            gfx = new PIXI.Graphics();
         }
         gfx.alpha = content.alpha;
         switch (content.type) {
@@ -405,7 +409,12 @@ export default class SimuloViewerPIXI {
 
                 // "circle cake", 15deg dark slice
                 if (circle.cakeSlice) {
-                    gfx.lineStyle(0);
+                    if (gfx instanceof SmoothGraphics) {
+                        gfx.lineStyle(0);
+                    }
+                    else {
+                        gfx.lineStyle(0);
+                    }
                     gfx.beginFill(0x000000, 0.5);
                     gfx.moveTo(0, 0);
                     gfx.arc(0, 0, circle.radius, -Math.PI / 16, Math.PI / 16);
