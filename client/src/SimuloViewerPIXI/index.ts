@@ -3,12 +3,13 @@ import { OutlineFilter } from '@pixi/filter-outline';
 import { Viewport } from "pixi-viewport";
 import type { Ball, Polygon, Cuboid, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerRapier";
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
+import { SmoothGraphics, LINE_SCALE_MODE, settings } from '@pixi/graphics-smooth';
 
 PIXI.curves.adaptive = false;
 
 interface GFX {
     selected: boolean;
-    gfx: PIXI.Graphics;
+    gfx: SmoothGraphics;
 }
 /** Renderer in PIXI.js for Simulo. You can add shapes with `addShape`, and update their positions with `update`. */
 
@@ -215,7 +216,7 @@ export default class SimuloViewerPIXI {
     }
 
     /** Graphics that are cleared and redrawn each frame, as they are expected to change every frame. */
-    tempGFXs: PIXI.Graphics[] = [];
+    tempGFXs: SmoothGraphics[] = [];
     shapeContents: { [id: string]: ShapeContentData } = {};
 
     update(worldUpdate: WorldUpdate) {
@@ -241,7 +242,7 @@ export default class SimuloViewerPIXI {
         });
         this.tempGFXs = []
         worldUpdate.springs.forEach((spring) => {
-            let gfx = new PIXI.Graphics();
+            let gfx = new SmoothGraphics();
             gfx.lineStyle(3 / this.viewport.scale.y, '#ffffff')
                 .moveTo(spring.pointA.x, -spring.pointA.y)
                 .lineTo(spring.pointB.x, -spring.pointB.y);
@@ -352,9 +353,9 @@ export default class SimuloViewerPIXI {
     }
 
     renderShape(content: ShapeContentData) {
-        let gfx = new PIXI.Graphics();
+        let gfx = new SmoothGraphics();
         if (content.border !== null) {
-            gfx.lineStyle(content.borderWidth ?? 1, content.border, 1, 0, content.borderWidth === 1);
+            gfx.lineStyle(content.borderWidth ?? 1, content.border, 1, 0, LINE_SCALE_MODE.NONE);
         }
         gfx.alpha = content.alpha;
         switch (content.type) {
