@@ -6,10 +6,14 @@ import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxSe
 
 PIXI.curves.adaptive = false;
 
+interface GFX {
+    selected: boolean;
+    gfx: PIXI.Graphics;
+}
 /** Renderer in PIXI.js for Simulo. You can add shapes with `addShape`, and update their positions with `update`. */
 
 export default class SimuloViewerPIXI {
-    coll2gfx: Map<string, PIXI.Graphics>;
+    coll2gfx: Map<string, GFX>;
     renderer: PIXI.Renderer;
     scene: PIXI.Container;
     viewport: Viewport;
@@ -211,15 +215,16 @@ export default class SimuloViewerPIXI {
     }
 
     /** Graphics that are cleared and redrawn each frame, as they are expected to change every frame. */
-    tempGFXs: PIXI.Graphics[] = []
+    tempGFXs: PIXI.Graphics[] = [];
+    shapeContents: { [id: string]: ShapeContentData } = {};
 
     update(worldUpdate: WorldUpdate) {
         // remove removedContents
         worldUpdate.delta.removedContents.forEach((id) => {
             let gfx = this.coll2gfx.get(id);
             if (gfx) {
-                this.viewport.removeChild(gfx);
-                gfx.destroy();
+                this.viewport.removeChild(gfx.gfx);
+                gfx.gfx.destroy();
                 this.coll2gfx.delete(id);
             }
         });
@@ -264,6 +269,54 @@ export default class SimuloViewerPIXI {
             audio.play();*/
             //this.playSound(sound.sound, sound.volume);
         });
+
+        // if any of our gfxes are in a worldUpdate.selectedObjects, white outline
+        let selectedShapes: string[] = [];
+        Object.keys(worldUpdate.selectedObjects).forEach((key) => {
+            let selectedObjects = worldUpdate.selectedObjects[key];
+            selectedObjects.forEach((content) => {
+                // find gfx pos
+                let realGfx = this.coll2gfx.get(content.id);
+                if (realGfx && !realGfx.selected) {
+                    let posX = realGfx.gfx.position.x;
+                    let posY = realGfx.gfx.position.y;
+                    let rotation = realGfx.gfx.rotation;
+                    // remove it
+                    this.viewport.removeChild(realGfx.gfx);
+                    realGfx.gfx.destroy();
+                    this.coll2gfx.delete(content.id);
+                    let gfx = this.renderShape({
+                        ...content,
+                        border: 0xffffff,
+                        borderWidth: 5
+                    });
+                    this.shapeContents[content.id] = content;
+                    gfx.position.x = posX;
+                    gfx.position.y = posY;
+                    gfx.rotation = rotation;
+                    this.coll2gfx.set(content.id, { selected: true, gfx });
+                    this.viewport.addChild(gfx);
+                }
+                selectedShapes.push(content.id);
+            });
+        });
+
+        // every shape that isnt in selectedshapes but has selected true will be redrawn from content
+        this.coll2gfx.forEach((gfx, key) => {
+            if (!selectedShapes.includes(key) && gfx.selected) {
+                let posX = gfx.gfx.position.x;
+                let posY = gfx.gfx.position.y;
+                let rotation = gfx.gfx.rotation;
+                this.viewport.removeChild(gfx.gfx);
+                gfx.gfx.destroy();
+                let newGfx = this.renderShape(this.shapeContents[key]);
+                newGfx.position.x = posX;
+                newGfx.position.y = posY;
+                newGfx.rotation = rotation;
+                this.coll2gfx.set(key, { selected: false, gfx: newGfx });
+                this.viewport.addChild(newGfx);
+            }
+        });
     }
 
     render() {
@@ -283,17 +336,17 @@ export default class SimuloViewerPIXI {
             let angle = data.angle;
 
             if (!!gfx) {
-                gfx.position.x = position.x;
-                gfx.position.y = -position.y;
-                gfx.rotation = -angle;
+                gfx.gfx.position.x = position.x;
+                gfx.gfx.position.y = -position.y;
+                gfx.gfx.rotation = -angle;
             }
         });
     }
 
     reset() {
         this.coll2gfx.forEach((gfx) => {
-            this.viewport.removeChild(gfx);
-            gfx.destroy();
+            this.viewport.removeChild(gfx.gfx);
+            gfx.gfx.destroy();
         });
         this.coll2gfx = new Map();
     }
@@ -350,12 +403,14 @@ export default class SimuloViewerPIXI {
                 gfx.endFill();
 
                 // "circle cake", 15deg dark slice
-                gfx.lineStyle(0);
-                gfx.beginFill(0x000000, 0.5);
-                gfx.moveTo(0, 0);
-                gfx.arc(0, 0, circle.radius, -Math.PI / 16, Math.PI / 16);
-                gfx.lineTo(0, 0);
-                gfx.endFill();
+                if (circle.cakeSlice) {
+                    gfx.lineStyle(0);
+                    gfx.beginFill(0x000000, 0.5);
+                    gfx.moveTo(0, 0);
+                    gfx.arc(0, 0, circle.radius, -Math.PI / 16, Math.PI / 16);
+                    gfx.lineTo(0, 0);
+                    gfx.endFill();
+                }
                 break;
             case "polygon":
                 let polygon = content as Polygon;
@@ -380,13 +435,13 @@ export default class SimuloViewerPIXI {
             // remove it so we dont get ghost shapes
             let gfx = this.coll2gfx.get(content.id);
             if (gfx) {
-                this.viewport.removeChild(gfx);
+                this.viewport.removeChild(gfx.gfx);
             }
         }
 
         let gfx = this.renderShape(content);
 
-        this.coll2gfx.set(content.id, gfx);
+        this.coll2gfx.set(content.id, { selected: false, gfx });
         this.viewport.addChild(gfx);
     }
 }

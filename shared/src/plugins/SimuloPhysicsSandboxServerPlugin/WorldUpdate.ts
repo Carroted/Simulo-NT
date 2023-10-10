@@ -1,4 +1,4 @@
-import type { SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerRapier"
+import type { ShapeContentData, SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerRapier"
 import type OverlayShape from "./OverlayShape"
 import type OverlayText from "./OverlayText"
 
@@ -7,4 +7,5 @@ export default interface WorldUpdate extends SimuloPhysicsStepInfo {
         shapes: OverlayShape[],
         texts: OverlayText[]
     }
+    selectedObjects: { [id: string]: ShapeContentData[] }
 };

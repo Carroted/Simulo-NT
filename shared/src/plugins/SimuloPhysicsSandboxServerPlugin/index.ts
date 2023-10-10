@@ -5,7 +5,7 @@ import type PhysicsSandboxPlayer from "./PhysicsSandboxPlayer";
 import PhysicsSandboxTool from "./PhysicsSandboxTool";
 
 import DragTool from "./tools/DragTool";
-import type { SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerRapier";
+import type { ShapeContentData, SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerRapier";
 
 import type WorldUpdate from "./WorldUpdate";
 import type OverlayShape from "./OverlayShape";
@@ -102,12 +102,21 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
     update(): void {
         // emit the the physics previousStep
         if (this.physicsPlugin.previousStepInfo) {
+            let selectedObjects: { [id: string]: ShapeContentData[] } = {};
+            Object.keys(this.players).forEach((id) => {
+                let player = this.players[id];
+                selectedObjects[id] = player.selectedObjects.map((collider) => {
+                    return this.physicsPlugin.physicsServer.getShapeContent(collider);
+                }).filter((element) => element !== null) as ShapeContentData[];
+            });
+
             this.controller.emit('world_update', {
                 ...this.physicsPlugin.previousStepInfo,
                 overlays: {
                     shapes: this.overlayShapes,
                     texts: this.overlayTexts
-                }
+                },
+                selectedObjects
             } as WorldUpdate, null);
         }
         // clear overlays

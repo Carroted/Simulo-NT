@@ -58,6 +58,8 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
             } else {
                 // select target and start moving
                 this.shapes[player.id] = [target];
+                // selection is now that
+                this.physicsSandbox.players[player.id].selectedObjects = [target];
             }
         }
         // make all shapes kinematic
