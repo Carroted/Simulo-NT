@@ -181,6 +181,11 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
             this.physicsPlugin.physicsServer = new SimuloPhysicsServerRapier();
             await this.physicsPlugin.physicsServer.initFromSaved(JSON.parse(localStorage.getItem('what the fu')!));
         }
+
+        if (event === 'set_paused') {
+            this.physicsPlugin.paused = data ? true : false; // force it to be a boolean, because why not
+            this.controller.emit('pause_changed', this.physicsPlugin.paused, null);
+        }
     }
     handleOutgoingEvent(event: string, data: any, id: string | null): void { }
 }

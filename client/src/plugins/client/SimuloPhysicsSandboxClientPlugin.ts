@@ -16,7 +16,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     id = "simulo-physics-sandbox-client-plugin";
     dependencies = [];
     controller: SimuloClientController;
-    viewer: SimuloViewerTHREE;
+    viewer: SimuloViewerPIXI;
 
     cachedImages: { [url: string]: any } = {}; // can store string for svg for example, or something else for rasters
 
@@ -52,12 +52,15 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
 
     utilityBar: HTMLDivElement;
     toolBar: HTMLDivElement;
+    menuBar: HTMLDivElement;
+    paused: boolean = false; // DONT set directly, this is updated when the server tells us it paused or whatever
+    pausedIndicator: HTMLDivElement;
 
     constructor(controller: SimuloClientController) {
         this.controller = controller;
-        this.viewer = new SimuloViewerTHREE();
-        /*
-        this.viewer = new SimuloViewerPIXI();*/
+        // this.viewer = new SimuloViewerTHREE();
+
+        this.viewer = new SimuloViewerPIXI();
 
         // listen to viewer events and emit them to the server in Physics Sandbox format
 
@@ -76,27 +79,52 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
                 this.controller.emit('player_up', e.point);
             }
         });
-        /*
-                let renderLoop = () => {
-                    this.viewer.render();
-                    requestAnimationFrame(renderLoop);
-                }
-                requestAnimationFrame(renderLoop);*/
+
+        let pauseOverlay = document.createElement('div');
+        pauseOverlay.className = 'pause-overlay';
+        pauseOverlay.id = 'pause-overlay';
+        this.fetchSVG('./icons/pause.svg').then((svg) => {
+            pauseOverlay.innerHTML = svg;
+        });
+        this.pausedIndicator = document.body.appendChild(pauseOverlay);
+
+        // spacebar = emit set_paused
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                this.controller.emit('set_paused', !this.paused);
+            }
+        });
+
+        let renderLoop = () => {
+            this.viewer.render();
+            requestAnimationFrame(renderLoop);
+        }
+        requestAnimationFrame(renderLoop);
 
 
-        //this.setColorCursor('./assets/textures/cursor_new.svg', '#000000');
-        document.body.style.cursor = 'none';
+        this.setColorCursor('./assets/textures/cursor_new.svg', '#000000');
+        // document.body.style.cursor = 'none';
 
         let utilityBar = document.createElement('div');
-        utilityBar.className = 'bar utilities';
+        utilityBar.className = 'panel bar utilities';
         utilityBar.style.display = 'none';
         utilityBar.innerHTML = 'coming soon (real)';
         this.utilityBar = document.body.appendChild(utilityBar);
 
         let toolBar = document.createElement('div');
-        toolBar.className = 'bar tools';
+        toolBar.className = 'panel bar tools';
         toolBar.style.display = 'none';
         this.toolBar = document.body.appendChild(toolBar);
+
+        let menuBar = document.createElement('div');
+        menuBar.className = 'panel bar menus';
+        this.menuBar = document.body.appendChild(menuBar);
+
+        // add File (thats it lmao)
+        let fileMenu = document.createElement('div');
+        fileMenu.className = 'menu';
+        fileMenu.innerHTML = 'File';
+        this.menuBar.appendChild(fileMenu);
 
         //@ts-ignore
         window.save = () => {
@@ -163,6 +191,15 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
                     this.toolElements[tool].classList.add('active');
                 }
             });
+        }
+        if (event === 'pause_changed') {
+            this.paused = data;
+            if (this.paused) {
+                this.pausedIndicator.style.opacity = '1';
+            }
+            else {
+                this.pausedIndicator.style.opacity = '0';
+            }
         }
     }
     handleOutgoingEvent(event: string, data: any): void { } // nothing here

@@ -15,6 +15,7 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
     controller: SimuloServerController;
     physicsServer: SimuloPhysicsServerRapier;
     previousStepInfo: SimuloPhysicsStepInfo | null = null;
+    paused = false;
 
     constructor(controller: SimuloServerController) {
         this.controller = controller;
@@ -27,6 +28,8 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
         console.log("start");
     }
     update(): void {
+        if (this.paused) return;
+
         let stepInfo = this.physicsServer.step();
         // physics plugin doesnt directly emit data, instead it should be before other plugins in execution order
         // plugins can then use previousStepInfo to get physics data, and send all data in one packet
