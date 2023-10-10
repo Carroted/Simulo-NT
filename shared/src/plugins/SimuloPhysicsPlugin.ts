@@ -28,7 +28,13 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
         console.log("start");
     }
     update(): void {
-        if (this.paused) return;
+        if (this.paused) {
+            // we dont want to step the world, but the world can still change if the players add stuff.
+            // so, we must render the world again with updated step info
+            let stepInfo = this.physicsServer.getStepInfo([], new Date().getTime()); // get updated world state, no collision sounds, and before is set to right now
+            this.previousStepInfo = stepInfo;
+            return;
+        }
 
         let stepInfo = this.physicsServer.step();
         // physics plugin doesnt directly emit data, instead it should be before other plugins in execution order

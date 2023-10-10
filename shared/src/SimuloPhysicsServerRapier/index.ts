@@ -53,6 +53,9 @@ interface SimuloPhysicsStepInfo {
 
         /** New positioning and rotation of shape contents. */
         shapeTransforms: { [id: string]: ShapeTransformData };
+
+        /** IDs of shape contents that are no more. */
+        removedContents: string[];
     };
 
     ms: number;
@@ -285,6 +288,7 @@ class SimuloPhysicsServerRapier {
     listeners: { [key: string]: Function[] } = {};
     colliders: Rapier.Collider[] = [];
     changedContents: { [id: string]: ShapeContentData } = {};
+    removedContents: string[] = [];
 
     private emit(event: string, data: any) {
         if (this.listeners[event]) {
@@ -701,13 +705,20 @@ class SimuloPhysicsServerRapier {
             }
         });
 
+        return this.getStepInfo(sounds, before);
+    }
+
+    getStepInfo(sounds: CollisionSound[], before: number): SimuloPhysicsStepInfo {
         let changed = this.changedContents;
         this.changedContents = {};
+        let removed = this.removedContents;
+        this.removedContents = [];
 
         return {
             delta: {
                 shapeContent: changed,
                 shapeTransforms: this.getShapeTransforms(), // this should be changed to a delta since lots of bodies are sleeping
+                removedContents: removed,
             },
             ms: new Date().getTime() - before,
             springs: Object.values(this.springs).map((spring) => {
@@ -725,11 +736,37 @@ class SimuloPhysicsServerRapier {
     getObjectAtPoint(x: number, y: number): Rapier.Collider | null {
         if (!this.world) { throw new Error('init world first'); }
         let point = new RAPIER.Vector2(x, y);
+        this.world.updateSceneQueries();
         let proj = this.world.projectPoint(point, true);
         if (proj != null && proj.isInside) {
             return proj.collider;
         }
         return null;
+    }
+
+    getObjectsInRect(startPoint: { x: number, y: number }, endPoint: { x: number, y: number }): Rapier.Collider[] {
+        if (!this.world) { throw new Error('init world first'); }
+        let shape = new RAPIER.Cuboid(Math.abs(startPoint.x - endPoint.x) / 2, Math.abs(startPoint.y - endPoint.y) / 2);
+        let shapePos = { x: (startPoint.x + endPoint.x) / 2, y: (startPoint.y + endPoint.y) / 2 };
+        this.world.updateSceneQueries();
+
+        let intersecting: Rapier.Collider[] = [];
+
+        this.colliders.forEach((collider) => {
+            if (collider.intersectsShape(shape, shapePos, 0)) {
+                intersecting.push(collider);
+            }
+        });
+
+        return intersecting;
+    }
+
+    destroyCollider(collider: Rapier.Collider) {
+        if (!this.world) { throw new Error('init world first'); }
+        this.colliders = this.colliders.filter((c) => c != collider);
+        let content = this.getShapeContent(collider);
+        this.world.removeCollider(collider, true);
+        if (content) this.removedContents.push(content.id);
     }
 
     getShapeContents(): { [id: string]: ShapeContentData } {

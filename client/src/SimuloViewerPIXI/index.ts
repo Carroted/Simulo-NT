@@ -214,6 +214,16 @@ export default class SimuloViewerPIXI {
     tempGFXs: PIXI.Graphics[] = []
 
     update(worldUpdate: WorldUpdate) {
+        // remove removedContents
+        worldUpdate.delta.removedContents.forEach((id) => {
+            let gfx = this.coll2gfx.get(id);
+            if (gfx) {
+                this.viewport.removeChild(gfx);
+                gfx.destroy();
+                this.coll2gfx.delete(id);
+            }
+        });
+
         for (let key in worldUpdate.delta.shapeContent) {
             let content = worldUpdate.delta.shapeContent[key];
             this.addShape(content);

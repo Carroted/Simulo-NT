@@ -15,12 +15,12 @@ export default class SpringTool implements PhysicsSandboxTool {
         this.physicsSandbox = physicsSandbox;
     }
 
-    startPoint: { x: number, y: number } | null = null;
+    startPoints: { [id: string]: { x: number, y: number } | null } = {};
 
     playerDown(player: PhysicsSandboxPlayer) {
         /*let target = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
         if (target) {*/
-        this.startPoint = { x: player.x, y: player.y };
+        this.startPoints[player.id] = { x: player.x, y: player.y };
         /*
                     let bodyANullable = target.parent();
                     if (bodyANullable !== null) {
@@ -63,9 +63,10 @@ export default class SpringTool implements PhysicsSandboxTool {
     }
 
     playerUp(player: PhysicsSandboxPlayer) {
-        if (!this.startPoint) return;
+        let startPoint = this.startPoints[player.id];
+        if (!startPoint) return;
 
-        let targetA = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(this.startPoint.x, this.startPoint.y);
+        let targetA = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(startPoint.x, startPoint.y);
         let targetB = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
 
         if (!targetA && !targetB) return; // only return if both missing, otherwise we can do something like the above comment block
@@ -97,10 +98,10 @@ export default class SpringTool implements PhysicsSandboxTool {
             },
 
             stiffness: 10,
-            localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA?.translation() ?? { x: 0, y: 0 }, bodyA?.rotation() ?? 0, { x: this.startPoint.x, y: this.startPoint.y }),
+            localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA?.translation() ?? { x: 0, y: 0 }, bodyA?.rotation() ?? 0, { x: startPoint.x, y: startPoint.y }),
             localAnchorB: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyB?.translation() ?? { x: 0, y: 0 }, bodyB?.rotation() ?? 0, { x: player.x, y: player.y }),
             // current distance
-            targetLength: Math.sqrt(Math.pow(this.startPoint.x - player.x, 2) + Math.pow(this.startPoint.y - player.y, 2)),
+            targetLength: Math.sqrt(Math.pow(startPoint.x - player.x, 2) + Math.pow(startPoint.y - player.y, 2)),
             damping: 1,
 
             // ids

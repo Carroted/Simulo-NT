@@ -5,7 +5,6 @@ import type PhysicsSandboxPlayer from "./PhysicsSandboxPlayer";
 import PhysicsSandboxTool from "./PhysicsSandboxTool";
 
 import DragTool from "./tools/DragTool";
-import CubesTool from "./tools/CubesTool";
 import type { SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerRapier";
 
 import type WorldUpdate from "./WorldUpdate";
@@ -13,9 +12,10 @@ import type OverlayShape from "./OverlayShape";
 import type OverlayText from "./OverlayText";
 import RectangleTool from "./tools/RectangleTool";
 import CircleTool from "./tools/CircleTool";
-import CToolUbe from './tools/CToolUbe';
 import SimuloPhysicsServerRapier from "../../SimuloPhysicsServerRapier";
 import SpringTool from "./tools/SpringTool";
+import SelectMoveTool from "./tools/SelectMoveTool";
+import PhysicsSandboxPlayerExtended from "./PhysicsSandboxPlayerExtended";
 
 export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlugin {
     name = "Simulo Physics Sandbox Server Plugin";
@@ -28,14 +28,13 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
 
     controller: SimuloServerController;
     physicsPlugin: SimuloPhysicsPlugin;
-    players: { [id: string]: PhysicsSandboxPlayer } = {};
+    players: { [id: string]: PhysicsSandboxPlayerExtended } = {};
 
     builtInTools: { [id: string]: PhysicsSandboxTool } = {
+        "select_move": new SelectMoveTool(this),
         "drag": new DragTool(this),
-        "cubes": new CubesTool(this),
         "rectangle": new RectangleTool(this),
         "circle": new CircleTool(this),
-        "cbues": new CToolUbe(this),
         "spring": new SpringTool(this)
     };
 
@@ -131,7 +130,8 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 color: 0xffffff,
                 id,
                 down: false,
-                tool: "drag"
+                tool: "drag",
+                selectedObjects: []
             }
         }
 
@@ -142,18 +142,18 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 this.players[id].y = data.y ?? 0;
             }
 
-            // player_move is usually triggered by mouse movement, but can also be triggered by keyboard movement
-            if (event === 'player_move') {
-                if (this.builtInTools[this.players[id].tool]) {
-                    this.builtInTools[this.players[id].tool].playerMove(this.players[id]);
-                }
-            }
-
             // player_down fires when primary input is pressed, such as mouse left click
             if (event === 'player_down') {
                 this.players[id].down = true;
                 if (this.builtInTools[this.players[id].tool]) {
                     this.builtInTools[this.players[id].tool].playerDown(this.players[id]);
+                }
+            }
+
+            // player_move is usually triggered by mouse movement, but can also be triggered by keyboard movement
+            if (event === 'player_move') {
+                if (this.builtInTools[this.players[id].tool]) {
+                    this.builtInTools[this.players[id].tool].playerMove(this.players[id]);
                 }
             }
 
@@ -169,6 +169,15 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 this.players[id].tool = data.toString();
                 console.log('changed tool to', data);
                 this.controller.emit('player_tool_success', data, id);
+            }
+
+            if (event === 'player_delete_selection') {
+                this.players[id].selectedObjects.forEach((collider) => {
+                    this.physicsPlugin.physicsServer.destroyCollider(collider);
+                    console.log('collider gone');
+                });
+                console.log('removed selection');
+                this.players[id].selectedObjects = [];
             }
         }
 

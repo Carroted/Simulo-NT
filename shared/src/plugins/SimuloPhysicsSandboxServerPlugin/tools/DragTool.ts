@@ -11,7 +11,7 @@ export default class DragTool implements PhysicsSandboxTool {
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 
-    spring: SimuloSpring | null = null;
+    springs: { [id: string]: SimuloSpring | null } = {};
 
     constructor(physicsSandbox: SimuloPhysicsSandboxServerPlugin) {
         this.physicsSandbox = physicsSandbox;
@@ -23,11 +23,11 @@ export default class DragTool implements PhysicsSandboxTool {
             let bodyANullable = target.parent();
             if (bodyANullable !== null) {
                 let bodyA = bodyANullable;
-                if (this.spring) {
-                    this.spring.destroy();
-                    this.spring = null;
+                if (this.springs[player.id]) {
+                    this.springs[player.id]!.destroy();
+                    this.springs[player.id] = null;
                 }
-                this.spring = this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
+                this.springs[player.id] = this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
                     // positions
                     getBodyAPosition: () => { return bodyA.translation() },
                     getBodyBPosition: () => { return { x: player.x, y: player.y } },
@@ -61,17 +61,17 @@ export default class DragTool implements PhysicsSandboxTool {
     }
     playerMove(player: PhysicsSandboxPlayer) {
         if (!player.down) return;
-        if (!this.spring) return;
+        if (!this.springs[player.id]) return;
 
-        this.spring.getBodyBPosition = () => {
+        this.springs[player.id]!.getBodyBPosition = () => {
             return { x: player.x, y: player.y };
         };
     }
     playerUp(player: PhysicsSandboxPlayer) {
-        if (!this.spring) return;
+        if (!this.springs[player.id]) return;
 
-        this.spring.destroy();
-        this.spring = null;
+        this.springs[player.id]!.destroy();
+        this.springs[player.id] = null;
     }
     update(player: PhysicsSandboxPlayer) { }
 }

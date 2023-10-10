@@ -16,18 +16,20 @@ export default class CircleTool implements PhysicsSandboxTool {
         this.physicsSandbox = physicsSandbox;
     }
 
-    startPoint: { x: number, y: number } | null = null;
+    startPoints: { [id: string]: { x: number, y: number } | null } = {};
     color: number | null = null;
 
     playerDown(player: PhysicsSandboxPlayer) {
-        this.startPoint = { x: player.x, y: player.y };
+        this.startPoints[player.id] = { x: player.x, y: player.y };
         this.color = randomColor();
     }
     playerMove(player: PhysicsSandboxPlayer) { }
     playerUp(player: PhysicsSandboxPlayer) {
-        if (!this.startPoint) return;
+        let startPoint = this.startPoints[player.id];
+        if (!startPoint) return;
+
         this.physicsSandbox.physicsPlugin.physicsServer.addCircle({
-            radius: Math.max(Math.abs(this.startPoint.x - player.x) / 2, Math.abs(this.startPoint.y - player.y) / 2),
+            radius: Math.max(Math.abs(startPoint.x - player.x) / 2, Math.abs(startPoint.y - player.y) / 2),
             color: this.color ?? 0xffffff,
             alpha: 1,
             name: "Circle",
@@ -41,17 +43,19 @@ export default class CircleTool implements PhysicsSandboxTool {
             density: 1,
             friction: 0.5,
             restitution: 0.8,
-            position: { x: (this.startPoint.x + player.x) / 2, y: (this.startPoint.y + player.y) / 2 },
+            position: { x: (startPoint.x + player.x) / 2, y: (startPoint.y + player.y) / 2 },
         });
-        this.startPoint = null;
+        this.startPoints[player.id] = null;
     }
 
     update(player: PhysicsSandboxPlayer) {
-        if (this.startPoint) {
+        let startPoint = this.startPoints[player.id];
+
+        if (startPoint) {
             // add overlays
             this.physicsSandbox.addOverlayShape({
                 content: {
-                    radius: Math.max(Math.abs(this.startPoint.x - player.x) / 2, Math.abs(this.startPoint.y - player.y) / 2),
+                    radius: Math.max(Math.abs(startPoint.x - player.x) / 2, Math.abs(startPoint.y - player.y) / 2),
                     color: this.color ?? 0xffffff,
                     alpha: 0.5,
                     zDepth: 0,
@@ -62,8 +66,8 @@ export default class CircleTool implements PhysicsSandboxTool {
                     cakeSlice: false,
                 } as Ball,
                 transform: {
-                    x: (this.startPoint.x + player.x) / 2,
-                    y: (this.startPoint.y + player.y) / 2,
+                    x: (startPoint.x + player.x) / 2,
+                    y: (startPoint.y + player.y) / 2,
                     z: 0,
                     angle: 0,
                 }

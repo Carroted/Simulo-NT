@@ -1,6 +1,5 @@
 import type SimuloClientPlugin from "../../SimuloClientPlugin";
 import type SimuloClientController from "../../SimuloClientController";
-import type PhysicsSandboxPlayer from "../../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/PhysicsSandboxPlayer";
 import SimuloViewerPIXI from "../../SimuloViewerPIXI";
 import SimuloViewerTHREE from "../../SimuloViewerTHREE";
 import type WorldUpdate from "../../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
@@ -55,6 +54,11 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     menuBar: HTMLDivElement;
     paused: boolean = false; // DONT set directly, this is updated when the server tells us it paused or whatever
     pausedIndicator: HTMLDivElement;
+    pausePlay: HTMLDivElement;
+
+    togglePaused() {
+        this.controller.emit('set_paused', !this.paused);
+    }
 
     constructor(controller: SimuloClientController) {
         this.controller = controller;
@@ -91,7 +95,10 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         // spacebar = emit set_paused
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
-                this.controller.emit('set_paused', !this.paused);
+                this.togglePaused();
+            }
+            if (e.code === 'Delete') {
+                this.controller.emit('player_delete_selection', '');
             }
         });
 
@@ -108,7 +115,26 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         let utilityBar = document.createElement('div');
         utilityBar.className = 'panel bar utilities';
         utilityBar.style.display = 'none';
-        utilityBar.innerHTML = 'coming soon (real)';
+        let pausePlay = document.createElement('div');
+        pausePlay.className = 'pause-play item';
+        let pauseDiv = document.createElement('div');
+        pauseDiv.className = 'pause';
+        let playDiv = document.createElement('div');
+        playDiv.className = 'play';
+        this.fetchSVG('./icons/pause.svg').then((svg) => {
+            pauseDiv.innerHTML = svg;
+        });
+        this.fetchSVG('./icons/play.svg').then((svg) => {
+            playDiv.innerHTML = svg;
+        });
+
+        pausePlay.appendChild(pauseDiv);
+        pausePlay.appendChild(playDiv);
+        pausePlay.addEventListener('click', (e) => {
+            this.togglePaused();
+        });
+        this.pausePlay = utilityBar.appendChild(pausePlay);
+
         this.utilityBar = document.body.appendChild(utilityBar);
 
         let toolBar = document.createElement('div');
@@ -134,6 +160,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         //@ts-ignore
         window.load = () => {
             this.controller.emit('load', '');
+            this.viewer.reset();
         };
     }
 
@@ -148,19 +175,17 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         id: string
     }[], toolID: string) {
         this.utilityBar.style.display = 'flex';
-        this.toolBar.style.display = 'flex';
+        this.toolBar.style.display = 'grid';
         this.toolBar.innerHTML = '';
         this.toolElements = {};
         for (let tool of tools) {
             const toolElement = document.createElement('div');
-            toolElement.className = toolID === tool.id ? 'tool active' : 'tool';
+            toolElement.className = toolID === tool.id ? 'tool item active' : 'tool item';
             toolElement.innerHTML = await this.fetchSVG(tool.icon);
             toolElement.addEventListener('click', (e) => {
                 this.controller.emit('player_tool', tool.id);
             });
-            const toolElementLine = document.createElement('div');
-            toolElementLine.className = 'line';
-            toolElement.appendChild(toolElementLine);
+
             this.toolElements[tool.id] = this.toolBar.appendChild(toolElement);
         }
     }
@@ -196,9 +221,11 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
             this.paused = data;
             if (this.paused) {
                 this.pausedIndicator.style.opacity = '1';
+                this.pausePlay.classList.add('paused');
             }
             else {
                 this.pausedIndicator.style.opacity = '0';
+                this.pausePlay.classList.remove('paused');
             }
         }
     }
