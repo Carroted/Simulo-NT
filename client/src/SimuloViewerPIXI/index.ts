@@ -288,7 +288,7 @@ export default class SimuloViewerPIXI {
                     let gfx = this.renderShape({
                         ...content,
                         border: 0xffffff,
-                        borderWidth: 5
+                        borderWidth: 3 / this.viewport.scale.y
                     });
                     this.shapeContents[content.id] = content;
                     gfx.position.x = posX;
@@ -354,7 +354,7 @@ export default class SimuloViewerPIXI {
     renderShape(content: ShapeContentData) {
         let gfx = new PIXI.Graphics();
         if (content.border !== null) {
-            gfx.lineStyle(1, content.border, 0.5, 0, true);
+            gfx.lineStyle(content.borderWidth ?? 1, content.border, 1, 0, content.borderWidth === 1);
         }
         gfx.alpha = content.alpha;
         switch (content.type) {
