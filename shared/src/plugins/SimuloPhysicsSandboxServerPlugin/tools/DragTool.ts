@@ -1,8 +1,9 @@
 import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
-import { SimuloSpring } from "../../../SimuloPhysicsServerRapier";
 import type SimuloObjectData from "../../../SimuloObjectData";
+import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
+import * as p2 from "p2-es";
 
 export default class DragTool implements PhysicsSandboxTool {
     name = "Drag";
@@ -11,66 +12,58 @@ export default class DragTool implements PhysicsSandboxTool {
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 
-    springs: { [id: string]: SimuloSpring | null } = {};
+    springs: { [id: string]: p2.LinearSpring | null } = {};
+    startPoints: { [id: string]: { x: number, y: number } | null } = {};
+    groundBodies: { [id: string]: p2.Body | null } = {}; // in box2d, ground bodies are used to anchor joints to the world, we reuse that name because its familiar
 
     constructor(physicsSandbox: SimuloPhysicsSandboxServerPlugin) {
         this.physicsSandbox = physicsSandbox;
     }
 
     playerDown(player: PhysicsSandboxPlayer) {
+        this.startPoints[player.id] = { x: player.x, y: player.y };
         let target = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
         if (target) {
-            let bodyANullable = target.parent();
-            if (bodyANullable !== null) {
-                let bodyA = bodyANullable;
-                if (this.springs[player.id]) {
-                    this.springs[player.id]!.destroy();
-                    this.springs[player.id] = null;
-                }
-                this.springs[player.id] = this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
-                    // positions
-                    getBodyAPosition: () => { return bodyA.translation() },
-                    getBodyBPosition: () => { return { x: player.x, y: player.y } },
-
-                    // rotations
-                    getBodyARotation: () => { return bodyA.rotation() },
-                    getBodyBRotation: () => { return 0; },
-
-                    // velocities
-                    getBodyAVelocity: () => { return bodyA.linvel() },
-                    getBodyBVelocity: () => { return { x: 0, y: 0 }; },
-
-                    // impulses
-                    applyBodyAImpulse: (impulse, worldPoint) => {
-                        bodyA.applyImpulseAtPoint(impulse, worldPoint, true);
-                    },
-                    applyBodyBImpulse: (impulse, worldPoint) => { },
-
-                    stiffness: 10,
-                    localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA.translation(), bodyA.rotation(), { x: player.x, y: player.y }),
-                    localAnchorB: { x: 0, y: 0 },
-                    targetLength: 0,
-                    damping: 1,
-
-                    // ids
-                    bodyA: (bodyA.userData as SimuloObjectData).id,
-                    bodyB: null,
-                });
+            let bodyA = target;
+            if (this.springs[player.id]) {
+                this.physicsSandbox.physicsPlugin.physicsServer.removeSpring(this.springs[player.id]!);
+                this.springs[player.id] = null;
             }
+            let ground = this.groundBodies[player.id];
+            if (!ground) {
+                ground = new p2.Body();
+                this.physicsSandbox.physicsPlugin.physicsServer.world.addBody(ground);
+                this.groundBodies[player.id] = ground;
+            }
+            this.springs[player.id] = this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
+                bodyA,
+                bodyB: ground,
+                stiffness: 5,
+                localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA, [player.x, player.y]),
+                localAnchorB: [0, 0],
+                damping: 0.1,
+                restLength: 0,
+            });
         }
     }
     playerMove(player: PhysicsSandboxPlayer) {
         if (!player.down) return;
-        if (!this.springs[player.id]) return;
+        if (!this.groundBodies[player.id]) return;
 
-        this.springs[player.id]!.getBodyBPosition = () => {
-            return { x: player.x, y: player.y };
-        };
+        let ground = this.groundBodies[player.id]!;
+        ground.position[0] = player.x;
+        ground.position[1] = player.y;
     }
-    playerUp(player: PhysicsSandboxPlayer) {
+    playerUp(player: PhysicsSandboxPlayerExtended) {
+        // if its at same point it started at, change selection
+        let startPoint = this.startPoints[player.id];
+        if (startPoint) {
+            this.physicsSandbox.selectionUpdate(startPoint, player);
+        }
+
         if (!this.springs[player.id]) return;
 
-        this.springs[player.id]!.destroy();
+        this.physicsSandbox.physicsPlugin.physicsServer.removeSpring(this.springs[player.id]!);
         this.springs[player.id] = null;
     }
     update(player: PhysicsSandboxPlayer) { }

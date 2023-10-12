@@ -1,9 +1,9 @@
 import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
-import type { Cuboid } from "../../../SimuloPhysicsServerRapier";
-import type RAPIER from "@dimforge/rapier2d-compat";
+import type { Cuboid } from "../../../SimuloPhysicsServerP2";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
+import * as p2 from "p2-es";
 
 export default class SelectMoveTool implements PhysicsSandboxTool {
     name = "Select and Move";
@@ -16,31 +16,10 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
         this.physicsSandbox = physicsSandbox;
     }
 
-    /*
-    spawnCube(x: number, y: number) {
-        this.physicsSandbox.physicsPlugin.physicsServer.addRectangle({
-            width: 0.5,
-            height: 0.5,
-            color: 0xff5520,
-            name: "Cube",
-            border: 0x000000,
-            borderScaleWithZoom: true,
-            borderWidth: 0.1,
-            image: null,
-            sound: null,
-            zDepth: 0,
-            isStatic: false,
-            density: 1,
-            friction: 0.5,
-            restitution: 0.8,
-            position: { x, y },
-        });
-    }*/
-
     startPoints: { [id: string]: { x: number, y: number } | null } = {};
-    shapes: { [id: string]: RAPIER.Collider[] } = {}; // if empty, we select, if not, we move
+    shapes: { [id: string]: p2.Body[] } = {}; // if empty, we select, if not, we move
     previousPositions: { [id: string]: { x: number, y: number } } = {};
-    shapeBodyTypes: { [id: string]: { [handle: number]: number } } = {};
+    shapeBodyMasses: { [id: string]: { [handle: number]: number } } = {};
 
     playerDown(player: PhysicsSandboxPlayerExtended) {
         this.startPoints[player.id] = { x: player.x, y: player.y };
@@ -52,7 +31,7 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
             this.shapes[player.id] = [];
         } else {
             // move, check .handle
-            if (player.selectedObjects.find(shape => shape.handle == target!.handle)) {
+            if (player.selectedObjects.find(shape => shape.id == target!.id)) {
                 // move selection
                 this.shapes[player.id] = player.selectedObjects;
             } else {
@@ -64,13 +43,13 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
         }
         // make all shapes kinematic
         this.shapes[player.id].forEach(shape => {
-            let parent = shape.parent();
+            let parent = shape;
             if (parent) {
-                if (!this.shapeBodyTypes[player.id]) {
-                    this.shapeBodyTypes[player.id] = {};
+                if (!this.shapeBodyMasses[player.id]) {
+                    this.shapeBodyMasses[player.id] = {};
                 }
-                this.shapeBodyTypes[player.id][parent.handle] = parent.bodyType();
-                parent.setBodyType(2, true);
+                this.shapeBodyMasses[player.id][parent.id] = parent.mass;
+                parent.mass = 0;
             }
         });
         this.previousPositions[player.id] = { x: player.x, y: player.y };
@@ -83,12 +62,10 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
             let deltaX = player.x - prevPos.x;
             let deltaY = player.y - prevPos.y;
             shapes.forEach(shape => {
-                let parent = shape.parent();
+                let parent = shape;
                 if (parent) {
-                    parent.setTranslation({
-                        x: parent.translation().x + deltaX,
-                        y: parent.translation().y + deltaY,
-                    }, true);
+                    parent.position[0] = parent.position[0] + deltaX;
+                    parent.position[1] = parent.position[1] + deltaY;
                 }
             });
         }
@@ -97,10 +74,9 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
     playerUp(player: PhysicsSandboxPlayer) {
         // restore body types
         this.shapes[player.id].forEach(shape => {
-            let parent = shape.parent();
+            let parent = shape;
             if (parent) {
-                parent.setBodyType(this.shapeBodyTypes[player.id][parent.handle], true);
-                console.log('Body Type is now', parent.bodyType())
+                parent.mass = this.shapeBodyMasses[player.id][parent.id];
                 // for some reason body seems to be in pseudosleep after kinematic to dynamic conversion or something, .wakeUp on its own does nothing
                 // (try it, remove .sleep, select falling grid of bodies that dont touch, move them, unpause, then release while unpaused and unmoving, they should float)
                 // after loads of experimentation, the only way to actually get this to work is to sleep and wake up the body
@@ -123,25 +99,6 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
                 console.log('selection length is', this.physicsSandbox.players[player.id].selectedObjects.length);
             }
         }
-
-        /*this.physicsSandbox.physicsPlugin.physicsServer.addRectangle({
-            width: Math.abs(this.startPoint.x - player.x) / 2,
-            height: Math.abs(this.startPoint.y - player.y) / 2,
-            color: 0xffffff,
-            alpha: 1,
-            name: "Select Box",
-            border: null,
-            borderScaleWithZoom: true,
-            borderWidth: 0.1,
-            image: null,
-            sound: "/assets/sounds/impact.wav",
-            zDepth: 0,
-            isStatic: false,
-            density: 1,
-            friction: 0.5,
-            restitution: 0.8,
-            position: { x: (this.startPoint.x + player.x) / 2, y: (this.startPoint.y + player.y) / 2 },
-        });*/
         this.startPoints[player.id] = null;
         this.shapes[player.id] = [];
         this.previousPositions[player.id] = { x: player.x, y: player.y };

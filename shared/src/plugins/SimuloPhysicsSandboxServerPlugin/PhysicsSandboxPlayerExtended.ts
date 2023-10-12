@@ -1,8 +1,8 @@
-import type RAPIER from "@dimforge/rapier2d-compat";
+import * as p2 from "p2-es";
 import type PhysicsSandboxPlayer from "./PhysicsSandboxPlayer";
 
 /** Adds selection to cursor */
 
 export default interface PhysicsSandboxPlayerExtended extends PhysicsSandboxPlayer {
-    selectedObjects: RAPIER.Collider[];
+    selectedObjects: p2.Body[];
 }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-import type { Ball, Polygon, Cuboid, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerRapier";
+import type { Ball, Polygon, Cuboid, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerP2";
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 
 /** Renderer in THREE.js for Simulo.

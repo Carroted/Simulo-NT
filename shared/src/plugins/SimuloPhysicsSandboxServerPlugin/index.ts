@@ -16,6 +16,8 @@ import SimuloPhysicsServerRapier from "../../SimuloPhysicsServerRapier";
 import SpringTool from "./tools/SpringTool";
 import SelectMoveTool from "./tools/SelectMoveTool";
 import PhysicsSandboxPlayerExtended from "./PhysicsSandboxPlayerExtended";
+import PolygonTool from "./tools/PolygonTool";
+import AxleTool from "./tools/AxleTool";
 
 export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlugin {
     name = "Simulo Physics Sandbox Server Plugin";
@@ -35,7 +37,9 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
         "drag": new DragTool(this),
         "rectangle": new RectangleTool(this),
         "circle": new CircleTool(this),
-        "spring": new SpringTool(this)
+        "spring": new SpringTool(this),
+        "polygon": new PolygonTool(this),
+        "axle": new AxleTool(this)
     };
 
     getTools(): {
@@ -53,6 +57,20 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
                 id
             }
         });
+    }
+
+    selectionUpdate(startPoint: {
+        x: number,
+        y: number
+    }, player: PhysicsSandboxPlayerExtended): boolean {
+        // if player moved less than x units, update selection
+        let distance = Math.sqrt(Math.pow(startPoint.x - player.x, 2) + Math.pow(startPoint.y - player.y, 2));
+        if (distance < 0.3) {
+            let target = this.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
+            this.players[player.id].selectedObjects = target ? [target] : [];
+            return true;
+        }
+        return false;
     }
 
     /** Overlays are cleared each frame, and sent alongside each `world_update`. */
@@ -182,7 +200,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
 
             if (event === 'player_delete_selection') {
                 this.players[id].selectedObjects.forEach((collider) => {
-                    this.physicsPlugin.physicsServer.destroyCollider(collider);
+                    this.physicsPlugin.physicsServer.destroyBody(collider);
                     console.log('collider gone');
                 });
                 console.log('removed selection');
@@ -191,13 +209,13 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
         }
 
         if (event === 'save') {
-            localStorage.setItem('what the fu', JSON.stringify(this.physicsPlugin.physicsServer.saveScene()));
+            //localStorage.setItem('what the fu', JSON.stringify(this.physicsPlugin.physicsServer.saveScene()));
         }
 
         if (event === 'load') {
-            this.physicsPlugin.physicsServer.world = null;
+            /*this.physicsPlugin.physicsServer.world = null;
             this.physicsPlugin.physicsServer = new SimuloPhysicsServerRapier();
-            await this.physicsPlugin.physicsServer.initFromSaved(JSON.parse(localStorage.getItem('what the fu')!));
+            await this.physicsPlugin.physicsServer.initFromSaved(JSON.parse(localStorage.getItem('what the fu')!));*/
         }
 
         if (event === 'set_paused') {

@@ -1,4 +1,4 @@
-import type { ShapeTransformData } from "../../SimuloPhysicsServerRapier";
+import type { ShapeTransformData } from "../../SimuloPhysicsServerP2";
 
 export default interface OverlayText {
     text: string,

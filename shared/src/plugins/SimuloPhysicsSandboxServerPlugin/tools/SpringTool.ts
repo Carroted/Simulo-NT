@@ -3,6 +3,7 @@ import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 import type SimuloObjectData from "../../../SimuloObjectData";
+import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
 
 export default class SpringTool implements PhysicsSandboxTool {
     name = "Spring";
@@ -62,53 +63,28 @@ export default class SpringTool implements PhysicsSandboxTool {
                 }*/
     }
 
-    playerUp(player: PhysicsSandboxPlayer) {
+    playerUp(player: PhysicsSandboxPlayerExtended) {
         let startPoint = this.startPoints[player.id];
         if (!startPoint) return;
+
+        // if its at same point it started at, change selection
+        if (this.physicsSandbox.selectionUpdate(startPoint, player)) {
+            this.startPoints[player.id] = null;
+            return;
+        }
 
         let targetA = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(startPoint.x, startPoint.y);
         let targetB = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
 
         if (!targetA && !targetB) return; // only return if both missing, otherwise we can do something like the above comment block
 
-        let bodyA = targetA?.parent() ?? null;
-        let bodyB = targetB?.parent() ?? null;
+        let bodyA = targetA;
+        let bodyB = targetB;
 
         if (!bodyA && !bodyB) return; // only return if both missing, otherwise we can do something like the above comment block
 
-        this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
-            // positions
-            getBodyAPosition: () => { return bodyA?.translation() ?? { x: 0, y: 0 } },
-            getBodyBPosition: () => { return bodyB?.translation() ?? { x: 0, y: 0 } },
 
-            // rotations
-            getBodyARotation: () => { return bodyA?.rotation() ?? 0 },
-            getBodyBRotation: () => { return bodyB?.rotation() ?? 0 },
-
-            // velocities
-            getBodyAVelocity: () => { return bodyA?.linvel() ?? { x: 0, y: 0 } },
-            getBodyBVelocity: () => { return bodyB?.linvel() ?? { x: 0, y: 0 } },
-
-            // impulses
-            applyBodyAImpulse: (impulse, worldPoint) => {
-                bodyA?.applyImpulseAtPoint(impulse, worldPoint, true);
-            },
-            applyBodyBImpulse: (impulse, worldPoint) => {
-                bodyB?.applyImpulseAtPoint(impulse, worldPoint, true);
-            },
-
-            stiffness: 10,
-            localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA?.translation() ?? { x: 0, y: 0 }, bodyA?.rotation() ?? 0, { x: startPoint.x, y: startPoint.y }),
-            localAnchorB: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyB?.translation() ?? { x: 0, y: 0 }, bodyB?.rotation() ?? 0, { x: player.x, y: player.y }),
-            // current distance
-            targetLength: Math.sqrt(Math.pow(startPoint.x - player.x, 2) + Math.pow(startPoint.y - player.y, 2)),
-            damping: 1,
-
-            // ids
-            bodyA: (bodyA?.userData as SimuloObjectData)?.id ?? null,
-            bodyB: (bodyB?.userData as SimuloObjectData)?.id ?? null,
-        });
-
+        this.startPoints[player.id] = null;
     }
     playerMove(player: PhysicsSandboxPlayer) { }
     update(player: PhysicsSandboxPlayer) {

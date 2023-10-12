@@ -1,9 +1,10 @@
 import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
-import type { Ball } from "../../../SimuloPhysicsServerRapier";
+import type { Ball } from "../../../SimuloPhysicsServerP2";
 
 import randomColor from "../../../randomColor";
+import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
 
 export default class CircleTool implements PhysicsSandboxTool {
     name = "Circle";
@@ -24,9 +25,14 @@ export default class CircleTool implements PhysicsSandboxTool {
         this.color = randomColor();
     }
     playerMove(player: PhysicsSandboxPlayer) { }
-    playerUp(player: PhysicsSandboxPlayer) {
+    playerUp(player: PhysicsSandboxPlayerExtended) {
         let startPoint = this.startPoints[player.id];
         if (!startPoint) return;
+
+        if (this.physicsSandbox.selectionUpdate(startPoint, player)) {
+            this.startPoints[player.id] = null;
+            return;
+        }
 
         this.physicsSandbox.physicsPlugin.physicsServer.addCircle({
             radius: Math.max(Math.abs(startPoint.x - player.x) / 2, Math.abs(startPoint.y - player.y) / 2),
@@ -63,7 +69,7 @@ export default class CircleTool implements PhysicsSandboxTool {
                     border: 0xffffff,
                     id: "circleToolOverlay",
                     borderWidth: 0.1,
-                    cakeSlice: false,
+                    cakeSlice: true,
                 } as Ball,
                 transform: {
                     x: (startPoint.x + player.x) / 2,

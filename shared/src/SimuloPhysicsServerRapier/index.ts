@@ -5,6 +5,10 @@ import randomColor from "../randomColor";
 
 import SimuloObjectData from "../SimuloObjectData";
 
+import polygonSplitter from 'polygon-splitter';
+import polygonDecomp from 'poly-decomp';
+
+
 interface ShapeContentData {
     id: string;
     type: "cuboid" | "ball" | "polygon" | "line";
@@ -335,6 +339,29 @@ class SimuloPhysicsServerRapier {
         return new SimuloSpring(this, spring, id);
     }
 
+    addAxle(axle: {
+        bodyA: Rapier.RigidBody;
+        bodyB: Rapier.RigidBody;
+        localAnchorA: Rapier.Vector2;
+        localAnchorB: Rapier.Vector2;
+    }) {
+        if (!this.world) { throw new Error('init world first'); }
+
+        let params = RAPIER.JointData.revolute(axle.localAnchorA, axle.localAnchorB);
+        let joint = this.world.createImpulseJoint(params, axle.bodyA, axle.bodyB, true);
+        // all of each bodys collider collision groups need to be adjusted
+        let colliderACount = axle.bodyA.numColliders();
+        let colliderBCount = axle.bodyB.numColliders();
+        for (let i = 0; i < colliderACount; i++) {
+            let collider = axle.bodyA.collider(i);
+            collider.setCollisionGroups(0);
+        }
+        for (let i = 0; i < colliderBCount; i++) {
+            let collider = axle.bodyB.collider(i);
+            collider.setCollisionGroups(0);
+        }
+    }
+
     getShapeContent(collider: Rapier.Collider): ShapeContentData | null {
         let shape = collider.shape;
         let parent = collider.parent();
@@ -367,7 +394,6 @@ class SimuloPhysicsServerRapier {
                     depth: Math.min(Math.max(width, height), 5),
                 };
                 return rect;
-                break;
             case RAPIER.ShapeType.Ball:
                 let ball = shape as Rapier.Ball;
                 let radius = ball.radius;
@@ -376,20 +402,27 @@ class SimuloPhysicsServerRapier {
                     type: "ball",
                     radius: radius,
                 } as Ball;
-                break;
             case RAPIER.ShapeType.ConvexPolygon:
-                let polygon = shape as Rapier.ConvexPolygon;
-                let points: Float32Array = polygon.vertices;
-                let pointsArray: [x: number, y: number][] = [];
-                for (let i = 0; i < points.length; i += 2) {
-                    pointsArray.push([points[i], points[i + 1]]);
+                if (bodyData.polygonPoints) {
+                    return {
+                        ...baseShape,
+                        type: "polygon",
+                        points: bodyData.polygonPoints.map((point) => [point.x, point.y]),
+                    } as Polygon;
                 }
-                return {
-                    ...baseShape,
-                    type: "polygon",
-                    points: pointsArray,
-                } as Polygon;
-                break;
+                else {
+                    let polygon = shape as Rapier.ConvexPolygon;
+                    let points: Float32Array = polygon.vertices;
+                    let pointsArray: [x: number, y: number][] = [];
+                    for (let i = 0; i < points.length; i += 2) {
+                        pointsArray.push([points[i], points[i + 1]]);
+                    }
+                    return {
+                        ...baseShape,
+                        type: "polygon",
+                        points: pointsArray,
+                    } as Polygon;
+                }
             default:
                 console.log("Unknown shape type", shape.type);
                 break;
@@ -536,6 +569,19 @@ class SimuloPhysicsServerRapier {
         points: { x: number, y: number }[],
     }) {
         if (!this.world) { throw new Error('init world first'); }
+        let pointsRaw = polygon.points.map((point) => [point.x, point.y]);
+        if (!polygonDecomp.isSimple(pointsRaw)) {
+            //throw new Error('Polygon is not simple, stop being so interesting, complex and unique');
+        }
+
+        polygonDecomp.makeCCW(pointsRaw);
+        polygonDecomp.removeDuplicatePoints(pointsRaw, 0.01);
+        polygonDecomp.removeCollinearPoints(pointsRaw, 0.1);
+
+        let polygons: number[][][] = polygonDecomp.quickDecomp(pointsRaw);
+        let colliders: Rapier.Collider[] = [];
+
+        console.log('count of polygons is', polygons.length);
 
         let id = polygon.id ?? this.getID("/");
 
@@ -557,29 +603,51 @@ class SimuloPhysicsServerRapier {
             borderScaleWithZoom: polygon.borderScaleWithZoom,
             image: polygon.image,
             zDepth: polygon.zDepth,
+            polygonPoints: polygon.points,
         });
 
         let body = this.world.createRigidBody(bodyDesc);
 
-        let colliderDesc = RAPIER.ColliderDesc.convexHull(
-            new Float32Array(polygon.points.flatMap((point) => [point.x, point.y]))
-        );
+        for (let points of polygons) {
+            // remove duplicates
+            polygonDecomp.removeDuplicatePoints(points, 0.01);
+            polygonDecomp.removeCollinearPoints(points, 0.1);
+            points.push(points[0]);
 
-        if (!colliderDesc) {
-            throw new Error('Failed to create collider');
+            // make sure theres no nans or nulls or undefineds, if there is, continue
+            if (points.some((point) => {
+                return (point === undefined) || (point === null) || !Array.isArray(point) || point.some((coord) => {
+                    return (coord === undefined) || (coord === null) || isNaN(coord);
+                });
+            })) {
+                continue;
+            }
+
+
+
+            console.log('points is', points)
+            let colliderDesc = RAPIER.ColliderDesc.convexHull(
+                new Float32Array(points.flat())
+            );
+
+            if (!colliderDesc) {
+                throw new Error('Failed to create collider');
+            }
+
+            colliderDesc = colliderDesc.setRestitution(polygon.restitution).setFriction(polygon.friction).setDensity(polygon.density)
+                .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
+            let coll = this.world.createCollider(colliderDesc!, body);
+
+            this.colliders.push(coll);
+            let content = this.getShapeContent(coll);
+            if (content) {
+                this.changedContents[id] = content;
+            }
+
+            colliders.push(coll);
         }
 
-        colliderDesc = colliderDesc.setRestitution(polygon.restitution).setFriction(polygon.friction).setDensity(polygon.density)
-            .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
-        let coll = this.world.createCollider(colliderDesc!, body);
-
-        this.colliders.push(coll);
-        let content = this.getShapeContent(coll);
-        if (content) {
-            this.changedContents[id] = content;
-        }
-
-        return coll;
+        return colliders;
     }
 
     addRectangle(rectangle: BaseShapeData & {
@@ -761,6 +829,21 @@ class SimuloPhysicsServerRapier {
         return intersecting;
     }
 
+    getObjectsAtPoint(x: number, y: number): Rapier.Collider[] {
+        if (!this.world) { throw new Error('init world first'); }
+        let point = new RAPIER.Vector2(x, y);
+        this.world.updateSceneQueries();
+        let intersecting: Rapier.Collider[] = [];
+
+        this.colliders.forEach((collider) => {
+            if (collider.containsPoint(point)) {
+                intersecting.push(collider);
+            }
+        });
+
+        return intersecting;
+    }
+
     destroyCollider(collider: Rapier.Collider) {
         if (!this.world) { throw new Error('init world first'); }
         this.colliders = this.colliders.filter((c) => c != collider);
@@ -913,6 +996,23 @@ class SimuloPhysicsServerRapier {
                 }
             })
         };
+    }
+
+    slicePolygon(collider: Rapier.Collider, line: number[][]) {
+        let shape = collider.shape as Rapier.ConvexPolygon;
+        let points: Float32Array = shape.vertices;
+        let pointsArray: [x: number, y: number][] = [];
+        for (let i = 0; i < points.length; i += 2) {
+            pointsArray.push([points[i], points[i + 1]]);
+        }
+        let newPoints = polygonSplitter({
+            type: "Polygon",
+            coordinates: pointsArray
+        }, {
+            type: "LineString",
+            coordinates: line,
+        });
+        console.log('OMG POINTSER:', newPoints);
     }
 
     getObjectByID(id: string): Rapier.RigidBody | null {

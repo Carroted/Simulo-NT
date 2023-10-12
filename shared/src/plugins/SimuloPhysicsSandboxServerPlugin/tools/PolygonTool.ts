@@ -1,15 +1,13 @@
 import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
-import type { Cuboid } from "../../../SimuloPhysicsServerP2";
 
 import randomColor from "../../../randomColor";
-import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
 
-export default class RectangleTool implements PhysicsSandboxTool {
-    name = "Rectangle";
-    description = "Draw rectangles";
-    icon = "icons/square.svg";
+export default class PolygonTool implements PhysicsSandboxTool {
+    name = "Polygon";
+    description = "Draw polygons";
+    icon = "icons/polygon.svg";
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 
@@ -17,48 +15,33 @@ export default class RectangleTool implements PhysicsSandboxTool {
         this.physicsSandbox = physicsSandbox;
     }
 
-    /*
-    spawnCube(x: number, y: number) {
-        this.physicsSandbox.physicsPlugin.physicsServer.addRectangle({
-            width: 0.5,
-            height: 0.5,
-            color: 0xff5520,
-            name: "Cube",
-            border: 0x000000,
-            borderScaleWithZoom: true,
-            borderWidth: 0.1,
-            image: null,
-            sound: null,
-            zDepth: 0,
-            isStatic: false,
-            density: 1,
-            friction: 0.5,
-            restitution: 0.8,
-            position: { x, y },
-        });
-    }*/
-
-    startPoints: { [id: string]: { x: number, y: number } | null } = {};
+    points: { [id: string]: { x: number, y: number }[] } = {};
     color: number | null = null;
 
     playerDown(player: PhysicsSandboxPlayer) {
-        this.startPoints[player.id] = { x: player.x, y: player.y };
+        this.points[player.id] = [{ x: player.x, y: player.y }];
         this.color = randomColor();
     }
-    playerMove(player: PhysicsSandboxPlayer) { }
-    playerUp(player: PhysicsSandboxPlayerExtended) {
-        let startPoint = this.startPoints[player.id];
-        if (!startPoint) return;
+    playerMove(player: PhysicsSandboxPlayer) {
+        // make sure its more than 0.1 away
+        if (!this.points[player.id] || this.points[player.id].length < 1) return;
+        let lastPoint = this.points[player.id][this.points[player.id].length - 1];
+        if (Math.abs(lastPoint.x - player.x) < 0.1 && Math.abs(lastPoint.y - player.y) < 0.1) return;
+        this.points[player.id].push({ x: player.x, y: player.y });
+    }
+    playerUp(player: PhysicsSandboxPlayer) {
+        let points = this.points[player.id];
+        if (!points || points.length < 3) return;
+        // remove double point, then check length again
+        let filteredPoints = points.filter((point, index) => {
+            return index === 0 || !(point.x === points[index - 1].x && point.y === points[index - 1].y);
+        });
+        // add start point to end
+        filteredPoints.push(filteredPoints[0]);
+        if (filteredPoints.length < 3) return;
 
-        // if its at same point it started at, change selection
-        if (this.physicsSandbox.selectionUpdate(startPoint, player)) {
-            this.startPoints[player.id] = null;
-            return;
-        }
-
-        this.physicsSandbox.physicsPlugin.physicsServer.addRectangle({
-            width: Math.abs(startPoint.x - player.x),
-            height: Math.abs(startPoint.y - player.y),
+        this.physicsSandbox.physicsPlugin.physicsServer.addPolygon({
+            points: filteredPoints,
             color: this.color ?? 0xffffff,
             alpha: 1,
             name: "Rectangle",
@@ -72,13 +55,13 @@ export default class RectangleTool implements PhysicsSandboxTool {
             density: 1,
             friction: 0.5,
             restitution: 0.8,
-            position: { x: (startPoint.x + player.x) / 2, y: (startPoint.y + player.y) / 2 },
+            position: { x: 0, y: 0 }, // since points are world space, we need to set the position to 0,0. soon we will switch this up and subtract stuff so its better lol
         });
-        this.startPoints[player.id] = null;
+        this.points[player.id] = [];
     }
 
     update(player: PhysicsSandboxPlayer) {
-        let startPoint = this.startPoints[player.id];
+        /*let startPoint = this.startPoints[player.id];
 
         if (startPoint) {
             // add overlays
@@ -102,6 +85,6 @@ export default class RectangleTool implements PhysicsSandboxTool {
                     angle: 0,
                 }
             });
-        }
+        }*/
     }
 }

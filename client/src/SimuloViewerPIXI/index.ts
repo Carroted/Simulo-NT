@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { OutlineFilter } from '@pixi/filter-outline';
 import { Viewport } from "pixi-viewport";
-import type { Ball, Polygon, Cuboid, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerRapier";
+import type { Ball, Polygon, Cuboid, ShapeContentData, ShapeTransformData, Plane } from "../../../shared/src/SimuloPhysicsServerP2";
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 import { SmoothGraphics, LINE_SCALE_MODE, settings } from '@pixi/graphics-smooth';
 
@@ -430,6 +430,15 @@ export default class SimuloViewerPIXI {
                     gfx.lineTo(polygon.points[i][0], -polygon.points[i][1]);
                 }
                 gfx.lineTo(polygon.points[0][0], -polygon.points[0][1]);
+                gfx.endFill();
+                break;
+            case "plane": // infinite plane, position is on the surface, plane is on bottom of position, angle points up
+                gfx.beginFill(content.color);
+                gfx.moveTo(-100000, 0);
+                gfx.lineTo(100000, 0);
+                gfx.lineTo(100000, 100000);
+                gfx.lineTo(-100000, 100000);
+                gfx.lineTo(-100000, 0);
                 gfx.endFill();
                 break;
             default:

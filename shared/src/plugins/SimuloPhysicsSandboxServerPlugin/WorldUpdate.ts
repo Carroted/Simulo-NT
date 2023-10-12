@@ -1,4 +1,4 @@
-import type { ShapeContentData, SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerRapier"
+import type { ShapeContentData, SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerP2"
 import type OverlayShape from "./OverlayShape"
 import type OverlayText from "./OverlayText"
 
