@@ -19,7 +19,7 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
     startPoints: { [id: string]: { x: number, y: number } | null } = {};
     shapes: { [id: string]: p2.Body[] } = {}; // if empty, we select, if not, we move
     previousPositions: { [id: string]: { x: number, y: number } } = {};
-    shapeBodyMasses: { [id: string]: { [handle: number]: number } } = {};
+    shapeBodyTypes: { [id: string]: { [handle: number]: 1 | 2 | 4 } } = {};
 
     playerDown(player: PhysicsSandboxPlayerExtended) {
         this.startPoints[player.id] = { x: player.x, y: player.y };
@@ -45,11 +45,11 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
         this.shapes[player.id].forEach(shape => {
             let parent = shape;
             if (parent) {
-                if (!this.shapeBodyMasses[player.id]) {
-                    this.shapeBodyMasses[player.id] = {};
+                if (!this.shapeBodyTypes[player.id]) {
+                    this.shapeBodyTypes[player.id] = {};
                 }
-                this.shapeBodyMasses[player.id][parent.id] = parent.mass;
-                parent.mass = 0;
+                this.shapeBodyTypes[player.id][parent.id] = parent.type;
+                parent.type = p2.Body.KINEMATIC;
             }
         });
         this.previousPositions[player.id] = { x: player.x, y: player.y };
@@ -76,8 +76,8 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
         this.shapes[player.id].forEach(shape => {
             let parent = shape;
             if (parent) {
-                parent.mass = this.shapeBodyMasses[player.id][parent.id];
-                // for some reason body seems to be in pseudosleep after kinematic to dynamic conversion or something, .wakeUp on its own does nothing
+                parent.type = this.shapeBodyTypes[player.id][parent.id];
+                // for some reason in rapier, body seems to be in pseudosleep after kinematic to dynamic conversion or something, .wakeUp on its own does nothing
                 // (try it, remove .sleep, select falling grid of bodies that dont touch, move them, unpause, then release while unpaused and unmoving, they should float)
                 // after loads of experimentation, the only way to actually get this to work is to sleep and wake up the body
                 // i know it doesnt seem to make sense, but try it if you dont believe me, it can take a few tries to get that bug to happen
