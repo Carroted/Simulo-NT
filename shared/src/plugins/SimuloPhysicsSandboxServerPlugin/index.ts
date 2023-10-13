@@ -1,18 +1,16 @@
 import type SimuloServerPlugin from "../../SimuloServerPlugin";
 import type SimuloServerController from "../../SimuloServerController";
 import type SimuloPhysicsPlugin from "../SimuloPhysicsPlugin";
-import type PhysicsSandboxPlayer from "./PhysicsSandboxPlayer";
 import PhysicsSandboxTool from "./PhysicsSandboxTool";
 
 import DragTool from "./tools/DragTool";
-import type { ShapeContentData, SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerRapier";
+import ShapeContentData from "../../ShapeContentData";
 
 import type WorldUpdate from "./WorldUpdate";
 import type OverlayShape from "./OverlayShape";
 import type OverlayText from "./OverlayText";
 import RectangleTool from "./tools/RectangleTool";
 import CircleTool from "./tools/CircleTool";
-import SimuloPhysicsServerRapier from "../../SimuloPhysicsServerRapier";
 import SpringTool from "./tools/SpringTool";
 import SelectMoveTool from "./tools/SelectMoveTool";
 import PhysicsSandboxPlayerExtended from "./PhysicsSandboxPlayerExtended";

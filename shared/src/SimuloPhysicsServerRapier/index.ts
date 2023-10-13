@@ -8,83 +8,13 @@ import SimuloObjectData from "../SimuloObjectData";
 import polygonSplitter from 'polygon-splitter';
 import polygonDecomp from 'poly-decomp';
 
+import ShapeContentData from "../ShapeContentData";
 
-interface ShapeContentData {
-    id: string;
-    type: "cuboid" | "ball" | "polygon" | "line";
-    color: number;
-    /** 0-1 alpha */
-    alpha: number;
-    border: number | null;
-    borderWidth: number | null;
-}
-
-interface CollisionSound {
-    sound: string;
-    volume: number;
-}
-
-interface Polygon extends ShapeContentData {
-    type: "polygon";
-    points: [x: number, y: number][];
-}
-
-interface Cuboid extends ShapeContentData {
-    type: "cuboid";
-    width: number;
-    height: number;
-    depth: number;
-}
-
-interface Ball extends ShapeContentData {
-    type: "ball";
-    radius: number;
-    cakeSlice: boolean;
-}
-
-/** Translation and rotation to apply to a shape. Scale is not included in this (and is instead in `ShapeContentData`) since it rarely changes, unlike position and rotation, which usually change every frame. */
-interface ShapeTransformData {
-    x: number;
-    y: number;
-    z: number;
-    angle: number;
-}
-
-interface SimuloPhysicsStepInfo {
-    delta: {
-        /** Shape content that has changed since last step. */
-        shapeContent: { [id: string]: ShapeContentData };
-
-        /** New positioning and rotation of shape contents. */
-        shapeTransforms: { [id: string]: ShapeTransformData };
-
-        /** IDs of shape contents that are no more. */
-        removedContents: string[];
-    };
-
-    ms: number;
-
-    /** Spring rendering data */
-    springs: SimuloSpringInfo[];
-
-    sounds: CollisionSound[];
-}
-
-interface SavedWorldState {
-    state: number[];
-    userDatas: { [handle: number]: SimuloObjectData };
-    currentIDs: { [container: string]: number };
-    springs: {
-        bodyA: string | null;
-        bodyB: string | null;
-        localAnchorA: { x: number, y: number };
-        localAnchorB: { x: number, y: number };
-        stiffness: number;
-        damping: number;
-        targetLength: number;
-        id: string;
-    }[];
-}
+import { Cuboid, Polygon, Ball } from "../ShapeContentData";
+import ShapeTransformData from "../ShapeTransformData";
+import CollisionSound from "../CollisionSound";
+import SimuloPhysicsStepInfo from "../SimuloPhysicsStepInfo";
+import SavedWorldState from "../SavedWorldState";
 
 /** Simulo creates fake spring joint with `applyImpulseAtPoint` on two bodies.
  * 
@@ -102,6 +32,9 @@ interface SimuloSpringDesc {
 
     getBodyAVelocity: () => Rapier.Vector2;
     getBodyBVelocity: () => Rapier.Vector2;
+
+    getBodyAAngularVelocity: () => number;
+    getBodyBAngularVelocity: () => number;
 
     applyBodyAImpulse: (impulse: Rapier.Vector2, worldPoint: Rapier.Vector2) => void;
     applyBodyBImpulse: (impulse: Rapier.Vector2, worldPoint: Rapier.Vector2) => void;
@@ -251,43 +184,11 @@ class SimuloSpring {
     }
 }
 
-/** The spring data needed for rendering */
+import BaseShapeData from "../BaseShapeData";
+import SimuloPhysicsServer from "../SimuloPhysicsServer";
+import SimuloObject from "../SimuloObject";
 
-interface SimuloSpringInfo {
-    pointA: { x: number, y: number };
-    pointB: { x: number, y: number };
-}
-
-interface BaseShapeData {
-    /** If none is provided, one will automatically be generated. If you provide this, it should always be in a container, there's no reason to supply one on root.
-     * 
-     * Good example of when to supply this: you are loading saved objects within a container.
-     * 
-     * Bad example of supplying this: you are creating a new object and giving it ID "ground". This is bad usage, IDs should always be like `/0`, `/34/1993`, etc. */
-    id?: string;
-    name: string | undefined;
-    /** Path to a sound file for collisions. Relative to /assets/sounds/ */
-    sound: string | null;
-    /** Color number like 0xffffff */
-    color: number;
-    /** 0-1 alpha */
-    alpha: number;
-    /** Color number or null for no border */
-    border: number | null;
-    borderWidth: number | null;
-    borderScaleWithZoom: boolean;
-    image: string | null;
-    /** We sort shapes with this for almost everything, including rendering. Newer shapes get a higher Z Depth. At the start of a scene, IDs and Z Depths will be the same, but user interaction can change this. */
-    zDepth: number;
-    flipImage?: boolean;
-    position: { x: number, y: number },
-    isStatic: boolean,
-    friction: number,
-    restitution: number,
-    density: number,
-}
-
-class SimuloPhysicsServerRapier {
+class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
     world: Rapier.World | null = null;
     listeners: { [key: string]: Function[] } = {};
     colliders: Rapier.Collider[] = [];
@@ -333,10 +234,115 @@ class SimuloPhysicsServerRapier {
     springs: { [id: string]: SimuloSpringDesc } = {};
 
     /** Add a spring */
-    addSpring(spring: SimuloSpringDesc): SimuloSpring {
+    addSpring(spring: {
+        objectA: SimuloObject | null; // null means world
+        objectB: SimuloObject | null; // null means world
+        stiffness: number;
+        damping: number;
+        restLength: number;
+        localAnchorA: { x: number, y: number, z: number };
+        localAnchorB: { x: number, y: number, z: number };
+    }): SimuloSpring {
         let id = this.getID("/");
-        this.springs[id] = spring;
-        return new SimuloSpring(this, spring, id);
+        let springDesc: SimuloSpringDesc = {
+            applyBodyAImpulse: (impulse: Rapier.Vector2, worldPoint: Rapier.Vector2) => {
+                if (spring.objectA) {
+                    if (spring.objectA.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectA.reference as RAPIER.RigidBody;
+                        body.applyImpulseAtPoint(impulse, worldPoint, true);
+                    }
+                }
+            },
+            applyBodyBImpulse: (impulse: Rapier.Vector2, worldPoint: Rapier.Vector2) => {
+                if (spring.objectB) {
+                    if (spring.objectB.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectB.reference as RAPIER.RigidBody;
+                        body.applyImpulseAtPoint(impulse, worldPoint, true);
+                    }
+                }
+            },
+            getBodyAPosition: () => {
+                if (spring.objectA) {
+                    if (spring.objectA.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectA.reference as RAPIER.RigidBody;
+                        return body.translation();
+                    }
+                }
+                return new RAPIER.Vector2(0, 0);
+            },
+            getBodyBPosition: () => {
+                if (spring.objectB) {
+                    if (spring.objectB.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectB.reference as RAPIER.RigidBody;
+                        return body.translation();
+                    }
+                }
+                return new RAPIER.Vector2(0, 0);
+            },
+            getBodyARotation: () => {
+                if (spring.objectA) {
+                    if (spring.objectA.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectA.reference as RAPIER.RigidBody;
+                        return body.rotation();
+                    }
+                }
+                return 0;
+            },
+            getBodyBRotation: () => {
+                if (spring.objectB) {
+                    if (spring.objectB.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectB.reference as RAPIER.RigidBody;
+                        return body.rotation();
+                    }
+                }
+                return 0;
+            },
+            getBodyAVelocity: () => {
+                if (spring.objectA) {
+                    if (spring.objectA.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectA.reference as RAPIER.RigidBody;
+                        return body.linvel();
+                    }
+                }
+                return new RAPIER.Vector2(0, 0);
+            },
+            getBodyBVelocity: () => {
+                if (spring.objectB) {
+                    if (spring.objectB.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectB.reference as RAPIER.RigidBody;
+                        return body.linvel();
+                    }
+                }
+                return new RAPIER.Vector2(0, 0);
+            },
+            getBodyAAngularVelocity: () => {
+                if (spring.objectA) {
+                    if (spring.objectA.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectA.reference as RAPIER.RigidBody;
+                        return body.angvel();
+                    }
+                }
+                return 0;
+            },
+            getBodyBAngularVelocity: () => {
+                if (spring.objectB) {
+                    if (spring.objectB.reference instanceof RAPIER.RigidBody) {
+                        let body = spring.objectB.reference as RAPIER.RigidBody;
+                        return body.angvel();
+                    }
+                }
+                return 0;
+            },
+            bodyA: spring.objectA ? spring.objectA.id : null,
+            bodyB: spring.objectB ? spring.objectB.id : null,
+            localAnchorA: new RAPIER.Vector2(spring.localAnchorA.x, spring.localAnchorA.y),
+            localAnchorB: new RAPIER.Vector2(spring.localAnchorB.x, spring.localAnchorB.y),
+            stiffness: spring.stiffness,
+            damping: spring.damping,
+            targetLength: spring.restLength,
+        };
+        this.springs[id] = springDesc;
+        return new SimuloSpring(this, springDesc, id);
     }
 
     addAxle(axle: {
@@ -377,6 +383,8 @@ class SimuloPhysicsServerRapier {
             border: border,
             id: bodyData.id,
             borderWidth: bodyData.borderWidth,
+            name: bodyData.name ?? "Some kind of object",
+            description: null
         };
 
         switch (shape.type) {
@@ -463,9 +471,10 @@ class SimuloPhysicsServerRapier {
         this.world.maxVelocityFrictionIterations =
             4 * 2;
 
-        let groundPlane = this.addRectangle({
+        let groundPlane = this.addCuboid({
             width: 1000,
             height: 500,
+            depth: 1,
             color: 0xa1acfa,
             alpha: 1,
             border: null,
@@ -501,8 +510,8 @@ class SimuloPhysicsServerRapier {
                 let body = world.createRigidBody(bodyDesc);
                 let colliderDesc = RAPIER.ColliderDesc.cuboid(ground.hx, ground.hy);
                 world.createCollider(colliderDesc, body);*/
-                this.addRectangle({
-                    width: ground.hx, height: ground.hy,
+                this.addCuboid({
+                    width: ground.hx, height: ground.hy, depth: 1,
                     color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
                     alpha: 1,
                     border: null,
@@ -542,8 +551,8 @@ class SimuloPhysicsServerRapier {
                     let body = world.createRigidBody(bodyDesc);
                     let colliderDesc = RAPIER.ColliderDesc.cuboid(rad, rad);
                     world.createCollider(colliderDesc, body);*/
-                    this.addRectangle({
-                        width: rad, height: rad,
+                    this.addCuboid({
+                        width: rad, height: rad, depth: 1,
                         color: randomColor(0, 1, 0.3, 0.8, 0.4, 1),
                         alpha: 1,
                         border: null,
@@ -567,7 +576,7 @@ class SimuloPhysicsServerRapier {
     /** multiple gon */
     addPolygon(polygon: BaseShapeData & {
         points: { x: number, y: number }[],
-    }) {
+    }): SimuloObject {
         if (!this.world) { throw new Error('init world first'); }
         let pointsRaw = polygon.points.map((point) => [point.x, point.y]);
         if (!polygonDecomp.isSimple(pointsRaw)) {
@@ -647,13 +656,14 @@ class SimuloPhysicsServerRapier {
             colliders.push(coll);
         }
 
-        return colliders;
+        return this.getSimuloObject(body);
     }
 
-    addRectangle(rectangle: BaseShapeData & {
+    addCuboid(rectangle: BaseShapeData & {
         width: number,
         height: number,
-    }) {
+        depth: number
+    }): SimuloObject {
         if (!this.world) { throw new Error('init world first'); }
 
         let id = rectangle.id ?? this.getID("/");
@@ -689,12 +699,13 @@ class SimuloPhysicsServerRapier {
             this.changedContents[id] = content;
         }
 
-        return coll;
+        return this.getSimuloObject(body);
     }
 
-    addCircle(circle: BaseShapeData & {
+    addBall(circle: BaseShapeData & {
         radius: number,
-    }) {
+        cakeSlice: boolean,
+    }): SimuloObject {
         if (!this.world) { throw new Error('init world first'); }
 
         let id = circle.id ?? this.getID("/");
@@ -716,6 +727,7 @@ class SimuloPhysicsServerRapier {
             borderScaleWithZoom: circle.borderScaleWithZoom,
             image: circle.image,
             zDepth: circle.zDepth,
+            cakeSlice: circle.cakeSlice,
         });
 
         let body = this.world.createRigidBody(bodyDesc);
@@ -730,7 +742,7 @@ class SimuloPhysicsServerRapier {
             this.changedContents[id] = content;
         }
 
-        return coll;
+        return this.getSimuloObject(body);
     }
 
     eventQueue: RAPIER.EventQueue | null = null;
@@ -801,18 +813,36 @@ class SimuloPhysicsServerRapier {
         };
     }
 
-    getObjectAtPoint(x: number, y: number): Rapier.Collider | null {
+    getObjectAtPoint(point: { x: number, y: number, z: number }): SimuloObject | null {
         if (!this.world) { throw new Error('init world first'); }
-        let point = new RAPIER.Vector2(x, y);
+        let vec = new RAPIER.Vector2(point.x, point.y);
         this.world.updateSceneQueries();
-        let proj = this.world.projectPoint(point, true);
+        let proj = this.world.projectPoint(vec, true);
         if (proj != null && proj.isInside) {
-            return proj.collider;
+            return this.getSimuloObject(proj.collider.parent()!);
         }
         return null;
     }
 
-    getObjectsInRect(startPoint: { x: number, y: number }, endPoint: { x: number, y: number }): Rapier.Collider[] {
+    getSimuloObject(reference: RAPIER.RigidBody): SimuloObject {
+        let id = 'unknown';
+        try {
+            let data = this.getShapeContent(reference.collider(0));
+            id = data?.id ?? 'unknown';
+        }
+        catch (e) { }
+
+        return {
+            destroy: () => {
+                if (!this.world) { throw new Error('init world first'); }
+                this.world.removeRigidBody(reference);
+            },
+            id,
+            reference,
+        };
+    }
+
+    getObjectsInCuboid(startPoint: { x: number, y: number, z: number }, endPoint: { x: number, y: number, z: number }): SimuloObject[] {
         if (!this.world) { throw new Error('init world first'); }
         let shape = new RAPIER.Cuboid(Math.abs(startPoint.x - endPoint.x) / 2, Math.abs(startPoint.y - endPoint.y) / 2);
         let shapePos = { x: (startPoint.x + endPoint.x) / 2, y: (startPoint.y + endPoint.y) / 2 };
@@ -826,22 +856,30 @@ class SimuloPhysicsServerRapier {
             }
         });
 
-        return intersecting;
+        return intersecting.map((collider) => {
+            return this.getSimuloObject(collider.parent()!);
+        });
     }
 
-    getObjectsAtPoint(x: number, y: number): Rapier.Collider[] {
+    getObjectsAtPoint(point: {
+        x: number,
+        y: number,
+        z: number,
+    }): SimuloObject[] {
         if (!this.world) { throw new Error('init world first'); }
-        let point = new RAPIER.Vector2(x, y);
+        let vec = new RAPIER.Vector2(point.x, point.y);
         this.world.updateSceneQueries();
         let intersecting: Rapier.Collider[] = [];
 
         this.colliders.forEach((collider) => {
-            if (collider.containsPoint(point)) {
+            if (collider.containsPoint(vec)) {
                 intersecting.push(collider);
             }
         });
 
-        return intersecting;
+        return intersecting.map((collider) => {
+            return this.getSimuloObject(collider.parent()!);
+        });
     }
 
     destroyCollider(collider: Rapier.Collider) {
@@ -850,6 +888,20 @@ class SimuloPhysicsServerRapier {
         let content = this.getShapeContent(collider);
         this.world.removeCollider(collider, true);
         if (content) this.removedContents.push(content.id);
+    }
+
+    destroyObject(simuloObject: SimuloObject) {
+        if (!this.world) { throw new Error('init world first'); }
+        let body = simuloObject.reference;
+        if (!(body instanceof RAPIER.RigidBody)) {
+            throw new Error('Invalid object');
+        }
+        let colliderCount = body.numColliders();
+        for (let i = 0; i < colliderCount; i++) {
+            let collider = body.collider(i);
+            this.destroyCollider(collider);
+        }
+        this.world.removeRigidBody(body);
     }
 
     getShapeContents(): { [id: string]: ShapeContentData } {
@@ -953,7 +1005,17 @@ class SimuloPhysicsServerRapier {
 
         const direction = this.normalize(springVector);
 
-        //const forceMagnitude = spring.stiffness * (distance - spring.targetLength) + (spring.damping);
+        // todo: use this
+        /*         // Compute relative velocity of the anchor points, u
+        vec2.subtract(u, bodyB.velocity, bodyA.velocity)
+        vec2.crossZV(tmp, bodyB.angularVelocity, rj)
+        vec2.add(u, u, tmp)
+        vec2.crossZV(tmp, bodyA.angularVelocity, ri)
+        vec2.subtract(u, u, tmp)
+
+        // F = - k * ( x - L ) - D * ( u )
+        vec2.scale(f, r_unit, -k * (rlen - l) - d * vec2.dot(u, r_unit)) */
+
         const forceMagnitudeA = spring.stiffness * (distance - spring.targetLength) - (spring.damping * (this.dot(springVector, velA) / distance));
         const forceMagnitudeB = -spring.stiffness * (distance - spring.targetLength) - (spring.damping * (this.dot(springVector, velB) / distance));
 
@@ -1015,7 +1077,7 @@ class SimuloPhysicsServerRapier {
         console.log('OMG POINTSER:', newPoints);
     }
 
-    getObjectByID(id: string): Rapier.RigidBody | null {
+    getObjectByID(id: string): SimuloObject | null {
         if (!this.world) { throw new Error('init world first'); }
         let bodies = this.world.bodies.getAll();
         let body = bodies.find((body) => {
@@ -1023,7 +1085,16 @@ class SimuloPhysicsServerRapier {
             return userData.id === id;
         });
 
-        return body ?? null;
+        if (body) {
+            let simuloObject: SimuloObject = {
+                destroy: () => {
+                    this.world?.removeRigidBody(body!);
+                },
+                id: id,
+                reference: body,
+            };
+        }
+        return null;
     }
 
     /** Real */
@@ -1054,10 +1125,10 @@ class SimuloPhysicsServerRapier {
             let bodyA: RAPIER.RigidBody | null = null;
             let bodyB: RAPIER.RigidBody | null = null;
             if (spring.bodyA) {
-                bodyA = this.getObjectByID(spring.bodyA);
+                bodyA = this.getObjectByID(spring.bodyA)?.reference;
             }
             if (spring.bodyB) {
-                bodyB = this.getObjectByID(spring.bodyB);
+                bodyB = this.getObjectByID(spring.bodyB)?.reference;
             }
 
             this.springs[spring.id] = {
@@ -1095,6 +1166,14 @@ class SimuloPhysicsServerRapier {
                     if (bodyB == null) return { x: 0, y: 0 };
                     return bodyB.linvel();
                 },
+                getBodyAAngularVelocity: () => {
+                    if (bodyA == null) return 0;
+                    return bodyA.angvel();
+                },
+                getBodyBAngularVelocity: () => {
+                    if (bodyB == null) return 0;
+                    return bodyB.angvel();
+                },
                 applyBodyAImpulse: (impulse: { x: number, y: number }, worldPoint: { x: number, y: number }) => {
                     if (bodyA == null) return;
                     bodyA.applyImpulseAtPoint(impulse, worldPoint, true);
@@ -1107,6 +1186,17 @@ class SimuloPhysicsServerRapier {
 
             };
         })
+    }
+    getObjectData(object: SimuloObject): SimuloObjectData | null {
+        if (!this.world) { throw new Error('init world first'); }
+        let body = object.reference;
+        if (!(body instanceof RAPIER.RigidBody)) {
+            throw new Error('Invalid object');
+        }
+        return body.userData as SimuloObjectData;
+    }
+    removeSpring(spring: any): void {
+        delete this.springs[spring.id];
     }
 }
 

@@ -1,107 +1,19 @@
 import * as p2 from "p2-es";
 import SimuloObjectData from "../SimuloObjectData";
+import ShapeTransformData from "../ShapeTransformData";
+import ShapeContentData from "../ShapeContentData";
+import CollisionSound from "../CollisionSound";
+import SimuloPhysicsStepInfo from "../SimuloPhysicsStepInfo";
 
-interface ShapeContentData {
-    id: string;
-    type: "cuboid" | "ball" | "polygon" | "line" | "plane";
-    color: number;
-    /** 0-1 alpha */
-    alpha: number;
-    border: number | null;
-    borderWidth: number | null;
-}
+import BaseShapeData from "../BaseShapeData";
 
-interface CollisionSound {
-    sound: string;
-    volume: number;
-}
+import { Polygon, Plane, Ball, Cuboid } from "../ShapeContentData";
 
-interface BaseShapeData {
-    /** If none is provided, one will automatically be generated. If you provide this, it should always be in a container, there's no reason to supply one on root.
-     * 
-     * Good example of when to supply this: you are loading saved objects within a container.
-     * 
-     * Bad example of supplying this: you are creating a new object and giving it ID "ground". This is bad usage, IDs should always be like `/0`, `/34/1993`, etc. */
-    id?: string;
-    name: string | undefined;
-    /** Path to a sound file for collisions. Relative to /assets/sounds/ */
-    sound: string | null;
-    /** Color number like 0xffffff */
-    color: number;
-    /** 0-1 alpha */
-    alpha: number;
-    /** Color number or null for no border */
-    border: number | null;
-    borderWidth: number | null;
-    borderScaleWithZoom: boolean;
-    image: string | null;
-    /** We sort shapes with this for almost everything, including rendering. Newer shapes get a higher Z Depth. At the start of a scene, IDs and Z Depths will be the same, but user interaction can change this. */
-    zDepth: number;
-    flipImage?: boolean;
-    position: { x: number, y: number },
-    isStatic: boolean,
-    friction: number,
-    restitution: number,
-    density: number,
-}
+import SimuloSpringInfo from "../SimuloSpringInfo";
+import SimuloPhysicsServer from "../SimuloPhysicsServer";
+import SimuloObject from "../SimuloObject";
 
-interface Polygon extends ShapeContentData {
-    type: "polygon";
-    points: [x: number, y: number][];
-}
-
-interface Cuboid extends ShapeContentData {
-    type: "cuboid";
-    width: number;
-    height: number;
-    depth: number;
-}
-
-interface Ball extends ShapeContentData {
-    type: "ball";
-    radius: number;
-    cakeSlice: boolean;
-}
-
-interface Plane extends ShapeContentData { // points up, infinite at bottom, position is on the surface of plane
-    type: "plane";
-}
-
-/** Translation and rotation to apply to a shape. Scale is not included in this (and is instead in `ShapeContentData`) since it rarely changes, unlike position and rotation, which usually change every frame. */
-interface ShapeTransformData {
-    x: number;
-    y: number;
-    z: number;
-    angle: number;
-}
-
-/** The spring data needed for rendering */
-
-interface SimuloSpringInfo {
-    pointA: { x: number, y: number };
-    pointB: { x: number, y: number };
-}
-
-interface SimuloPhysicsStepInfo {
-    delta: {
-        /** Shape content that has changed since last step. */
-        shapeContent: { [id: string]: ShapeContentData };
-
-        /** New positioning and rotation of shape contents. */
-        shapeTransforms: { [id: string]: ShapeTransformData };
-
-        /** IDs of shape contents that are no more. */
-        removedContents: string[];
-    };
-
-    ms: number;
-
-    springs: SimuloSpringInfo[];
-
-    sounds: CollisionSound[];
-}
-
-class SimuloPhysicsServerP2 {
+class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
     world: p2.World;
     changedContents: {
         [id: string]: ShapeContentData;
@@ -286,7 +198,7 @@ class SimuloPhysicsServerP2 {
 
     addPolygon(polygon: BaseShapeData & {
         points: { x: number, y: number }[];
-    }) {
+    }): SimuloObject {
         let body = new p2.Body({
             mass: 1
         });
@@ -311,7 +223,22 @@ class SimuloPhysicsServerP2 {
                 borderScaleWithZoom: false,
             };
             this.changedContents[body.shapes[0].id.toString()] = this.getShapeContent(body)!;
+            return this.getSimuloObject(body)!;
         }
+        throw new Error("Failed to create polygon");
+    }
+
+    getSimuloObject(reference: any): SimuloObject | null {
+        if (reference instanceof p2.Body) {
+            return {
+                destroy: () => {
+                    this.destroyBody(reference);
+                },
+                id: reference.id.toString(),
+                reference: reference
+            };
+        }
+        return null;
     }
 
     getShapeContent(body: p2.Body): ShapeContentData | null {
@@ -327,6 +254,8 @@ class SimuloPhysicsServerP2 {
             alpha: 1,
             border: null,
             borderWidth: null,
+            name: objectData ? (objectData.name ?? "Some kind of object") : "Some kind of object",
+            description: null
         };
         if (shape instanceof p2.Box) {
             let rect: Cuboid = {
@@ -369,8 +298,8 @@ class SimuloPhysicsServerP2 {
         }
     }
 
-    getObjectAtPoint(x: number, y: number): p2.Body | null {
-        let bodies = this.world.hitTest([x, y], this.world.bodies, 5);
+    getObjectAtPoint(point: { x: number, y: number, z: number }): SimuloObject | null {
+        let bodies = this.world.hitTest([point.x, point.y], this.world.bodies, 5);
 
         let b: p2.Body | undefined = undefined;
         while (bodies.length > 0) {
@@ -382,12 +311,14 @@ class SimuloPhysicsServerP2 {
             }
         }
 
-        return b || null;
+        return this.getSimuloObject(b) || null;
     }
 
-    getObjectsAtPoint(x: number, y: number): p2.Body[] {
-        let bodies = this.world.hitTest([x, y], this.world.bodies, 5);
-        return bodies;
+    getObjectsAtPoint(point: { x: number, y: number, z: number }): SimuloObject[] {
+        let bodies = this.world.hitTest([point.x, point.y], this.world.bodies, 5);
+        return bodies.map((body) => {
+            return this.getSimuloObject(body)!;
+        });
     }
 
     getObjectsInRect(startPoint: { x: number, y: number }, endPoint: { x: number, y: number }): p2.Body[] {
@@ -437,12 +368,20 @@ class SimuloPhysicsServerP2 {
         height: number;
     }) {
         let body = new p2.Body({
-            mass: rectangle.isStatic ? 0 : 1
+            // we calculate mass based on density and width/height
+            mass: rectangle.isStatic ? 0 : ((rectangle.density / 10) * rectangle.width * rectangle.height)
         });
         let shape = new p2.Box({
             width: rectangle.width,
-            height: rectangle.height
+            height: rectangle.height,
         });
+        body.updateSolveMassProperties();
+        // I = mass * (width.x * width.x + width.y * width.y) / 12.0f;
+        // invI = 1.0f / I;
+
+        let inertia = body.mass * (rectangle.width * rectangle.width + rectangle.height * rectangle.height) * 50000;
+        body.inertia = inertia;
+        body.invInertia = 1 / inertia;
         body.addShape(shape);
         body.position = [rectangle.position.x, rectangle.position.y];
         body.angle = 0;
@@ -463,20 +402,20 @@ class SimuloPhysicsServerP2 {
     }
 
     addSpring(spring: {
-        bodyA: p2.Body;
-        bodyB: p2.Body;
+        objectA: SimuloObject | null; // null means world
+        objectB: SimuloObject | null; // null means world
         stiffness: number;
         damping: number;
         restLength: number;
-        localAnchorA: [number, number];
-        localAnchorB: [number, number];
+        localAnchorA: { x: number, y: number, z: number };
+        localAnchorB: { x: number, y: number, z: number };
     }) {
         let constraint = new p2.LinearSpring(spring.bodyA, spring.bodyB, {
             stiffness: spring.stiffness,
             damping: spring.damping,
             restLength: spring.restLength,
-            localAnchorA: spring.localAnchorA,
-            localAnchorB: spring.localAnchorB
+            localAnchorA: [spring.localAnchorA.x, spring.localAnchorA.y],
+            localAnchorB: [spring.localAnchorB.x, spring.localAnchorB.y]
         });
         this.world.addSpring(constraint);
         return constraint;
@@ -499,12 +438,3 @@ class SimuloPhysicsServerP2 {
 
 
 export default SimuloPhysicsServerP2;
-export {
-    SimuloPhysicsStepInfo,
-    ShapeContentData,
-    Cuboid,
-    Polygon,
-    Ball,
-    ShapeTransformData,
-    Plane
-};

@@ -1,7 +1,7 @@
 import type SimuloServerPlugin from "../SimuloServerPlugin";
 import type SimuloServerController from "../SimuloServerController";
-//import SimuloPhysicsServerRapier, { SimuloPhysicsStepInfo } from "../SimuloPhysicsServerRapier";
-import SimuloPhysicsServerP2, { SimuloPhysicsStepInfo } from "../SimuloPhysicsServerP2";
+import SimuloPhysicsServerRapier, { SimuloPhysicsStepInfo } from "../SimuloPhysicsServerRapier";
+//import SimuloPhysicsServerP2, { SimuloPhysicsStepInfo } from "../SimuloPhysicsServerP2";
 
 /** SimuloPhysicsServerRapier as a plugin, which is a rapier physics wrapper that also adds springs */
 
@@ -14,13 +14,13 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
     id = "simulo-physics-plugin";
     dependencies = [];
     controller: SimuloServerController;
-    physicsServer: SimuloPhysicsServerP2;
+    physicsServer: SimuloPhysicsServerRapier;
     previousStepInfo: SimuloPhysicsStepInfo | null = null;
     paused = false;
 
     constructor(controller: SimuloServerController) {
         this.controller = controller;
-        this.physicsServer = new SimuloPhysicsServerP2();
+        this.physicsServer = new SimuloPhysicsServerRapier();
     }
     async init() {
         // oops i forgot to do anything
