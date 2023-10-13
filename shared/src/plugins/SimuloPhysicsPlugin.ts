@@ -1,7 +1,8 @@
 import type SimuloServerPlugin from "../SimuloServerPlugin";
 import type SimuloServerController from "../SimuloServerController";
-import SimuloPhysicsServerRapier, { SimuloPhysicsStepInfo } from "../SimuloPhysicsServerRapier";
-//import SimuloPhysicsServerP2, { SimuloPhysicsStepInfo } from "../SimuloPhysicsServerP2";
+import SimuloPhysicsServerRapier from "../SimuloPhysicsServerRapier";
+import type SimuloPhysicsStepInfo from "../SimuloPhysicsStepInfo";
+import type SimuloPhysicsServer from "../SimuloPhysicsServer";
 
 /** SimuloPhysicsServerRapier as a plugin, which is a rapier physics wrapper that also adds springs */
 
@@ -14,7 +15,7 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
     id = "simulo-physics-plugin";
     dependencies = [];
     controller: SimuloServerController;
-    physicsServer: SimuloPhysicsServerRapier;
+    physicsServer: SimuloPhysicsServer;
     previousStepInfo: SimuloPhysicsStepInfo | null = null;
     paused = false;
 

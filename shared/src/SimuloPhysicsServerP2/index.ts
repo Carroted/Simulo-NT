@@ -410,7 +410,7 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
         localAnchorA: { x: number, y: number, z: number };
         localAnchorB: { x: number, y: number, z: number };
     }) {
-        let constraint = new p2.LinearSpring(spring.bodyA, spring.bodyB, {
+        let constraint = new p2.LinearSpring(spring.objectA?.reference, spring.objectB?.reference, {
             stiffness: spring.stiffness,
             damping: spring.damping,
             restLength: spring.restLength,
@@ -431,8 +431,11 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
         return [vec[0], vec[1]];
     }
 
-    getObjectData(body: p2.Body): SimuloObjectData | null {
-        return this.objectDatas[body.id] || null;
+    getObjectData(body: p2.Body | SimuloObject): SimuloObjectData | null {
+        if (!(body instanceof p2.Body)) {
+            body = body.reference;
+        }
+        return this.objectDatas[(body as p2.Body).id] || null;
     }
 }
 

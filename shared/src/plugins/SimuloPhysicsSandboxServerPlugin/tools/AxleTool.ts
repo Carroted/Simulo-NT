@@ -26,7 +26,11 @@ export default class AxleTool implements PhysicsSandboxTool {
         let startPoint = this.startPoints[player.id];
         if (!startPoint) return;
 
-        let targets = this.physicsSandbox.physicsPlugin.physicsServer.getObjectsAtPoint(startPoint.x, startPoint.y);
+        let targets = this.physicsSandbox.physicsPlugin.physicsServer.getObjectsAtPoint({
+            x: startPoint.x,
+            y: startPoint.y,
+            z: 0
+        });
         if (targets.length < 2) return;
         let targetA = targets[0];
         let targetB = targets[1];

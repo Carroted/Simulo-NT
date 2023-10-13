@@ -73,7 +73,7 @@ export default class SpringTool implements PhysicsSandboxTool {
             return;
         }
 
-        let targetA = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(startPoint.x, startPoint.y);
+        /*let targetA = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(startPoint.x, startPoint.y);
         let targetB = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
 
         if (!targetA && !targetB) return; // only return if both missing, otherwise we can do something like the above comment block
@@ -84,7 +84,7 @@ export default class SpringTool implements PhysicsSandboxTool {
         if (!bodyA && !bodyB) return; // only return if both missing, otherwise we can do something like the above comment block
 
 
-        this.startPoints[player.id] = null;
+        this.startPoints[player.id] = null;*/
     }
     playerMove(player: PhysicsSandboxPlayer) { }
     update(player: PhysicsSandboxPlayer) {

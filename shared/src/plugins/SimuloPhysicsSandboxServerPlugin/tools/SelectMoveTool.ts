@@ -1,9 +1,10 @@
 import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
-import type { Cuboid } from "../../../SimuloPhysicsServerP2";
+//import type { Cuboid } from "../../../SimuloPhysicsServerP2";
+import { Cuboid } from "../../../ShapeContentData";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
-import * as p2 from "p2-es";
+import SimuloObject from "../../../SimuloObject";
 
 export default class SelectMoveTool implements PhysicsSandboxTool {
     name = "Select and Move";
@@ -17,12 +18,12 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
     }
 
     startPoints: { [id: string]: { x: number, y: number } | null } = {};
-    shapes: { [id: string]: p2.Body[] } = {}; // if empty, we select, if not, we move
+    shapes: { [id: string]: SimuloObject[] } = {}; // if empty, we select, if not, we move
     previousPositions: { [id: string]: { x: number, y: number } } = {};
     shapeBodyTypes: { [id: string]: { [handle: number]: 1 | 2 | 4 } } = {};
 
     playerDown(player: PhysicsSandboxPlayerExtended) {
-        this.startPoints[player.id] = { x: player.x, y: player.y };
+        /*this.startPoints[player.id] = { x: player.x, y: player.y };
         // shape at cursor
         let target = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
         // if no target, select. else if target in selection, move selection. else, select target and start moving
@@ -52,10 +53,10 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
                 parent.type = p2.Body.KINEMATIC;
             }
         });
-        this.previousPositions[player.id] = { x: player.x, y: player.y };
+        this.previousPositions[player.id] = { x: player.x, y: player.y };*/
     }
     playerMove(player: PhysicsSandboxPlayer) {
-        // if theres prevpos and shapes, move
+        /*// if theres prevpos and shapes, move
         let prevPos = this.previousPositions[player.id];
         let shapes = this.shapes[player.id];
         if (prevPos && shapes && shapes.length) {
@@ -69,10 +70,10 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
                 }
             });
         }
-        this.previousPositions[player.id] = { x: player.x, y: player.y };
+        this.previousPositions[player.id] = { x: player.x, y: player.y };*/
     }
     playerUp(player: PhysicsSandboxPlayer) {
-        // restore body types
+        /*// restore body types
         this.shapes[player.id].forEach(shape => {
             let parent = shape;
             if (parent) {
@@ -101,11 +102,11 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
         }
         this.startPoints[player.id] = null;
         this.shapes[player.id] = [];
-        this.previousPositions[player.id] = { x: player.x, y: player.y };
+        this.previousPositions[player.id] = { x: player.x, y: player.y };*/
     }
 
     update(player: PhysicsSandboxPlayer) {
-        if (!this.shapes[player.id] || !this.shapes[player.id].length) {
+        /*if (!this.shapes[player.id] || !this.shapes[player.id].length) {
             let startPoint = this.startPoints[player.id];
 
             if (startPoint) {
@@ -130,7 +131,6 @@ export default class SelectMoveTool implements PhysicsSandboxTool {
                         angle: 0,
                     }
                 });
-            }
-        }
+            }*/
     }
 }

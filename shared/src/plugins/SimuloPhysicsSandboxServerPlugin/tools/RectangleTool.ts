@@ -1,7 +1,7 @@
 import type PhysicsSandboxTool from "../PhysicsSandboxTool";
 import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
-import type { Cuboid } from "../../../SimuloPhysicsServerP2";
+import type { Cuboid } from "../../../ShapeContentData";
 
 import randomColor from "../../../randomColor";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
@@ -56,9 +56,10 @@ export default class RectangleTool implements PhysicsSandboxTool {
             return;
         }
 
-        this.physicsSandbox.physicsPlugin.physicsServer.addRectangle({
+        this.physicsSandbox.physicsPlugin.physicsServer.addCuboid({
             width: Math.abs(startPoint.x - player.x),
             height: Math.abs(startPoint.y - player.y),
+            depth: 1,
             color: this.color ?? 0xffffff,
             alpha: 1,
             name: "Rectangle",
@@ -94,6 +95,8 @@ export default class RectangleTool implements PhysicsSandboxTool {
                     border: 0xffffff,
                     id: "rectangleToolOverlay",
                     borderWidth: 0.1,
+                    name: "Rectangle",
+                    description: null
                 } as Cuboid,
                 transform: {
                     x: (startPoint.x + player.x) / 2,

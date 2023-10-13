@@ -3,7 +3,7 @@ import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 import type SimuloObjectData from "../../../SimuloObjectData";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
-import * as p2 from "p2-es";
+import SimuloObject from "../../../SimuloObject";
 
 export default class DragTool implements PhysicsSandboxTool {
     name = "Drag";
@@ -12,9 +12,9 @@ export default class DragTool implements PhysicsSandboxTool {
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 
-    springs: { [id: string]: p2.LinearSpring | null } = {};
+    /*springs: { [id: string]: p2.LinearSpring | null } = {};
     startPoints: { [id: string]: { x: number, y: number } | null } = {};
-    groundBodies: { [id: string]: p2.Body | null } = {}; // in box2d, ground bodies are used to anchor joints to the world, we reuse that name because its familiar
+    groundBodies: { [id: string]: SimuloObject | null } = {}; // in box2d, ground bodies are used to anchor joints to the world, we reuse that name because its familiar
 
     constructor(physicsSandbox: SimuloPhysicsSandboxServerPlugin) {
         this.physicsSandbox = physicsSandbox;
@@ -66,5 +66,21 @@ export default class DragTool implements PhysicsSandboxTool {
         this.physicsSandbox.physicsPlugin.physicsServer.removeSpring(this.springs[player.id]!);
         this.springs[player.id] = null;
     }
-    update(player: PhysicsSandboxPlayer) { }
+    update(player: PhysicsSandboxPlayer) { }*/
+
+    playerDown(player: PhysicsSandboxPlayerExtended): void {
+
+    }
+    playerMove(player: PhysicsSandboxPlayerExtended): void {
+
+    }
+    playerUp(player: PhysicsSandboxPlayerExtended): void {
+
+    }
+    update(player: PhysicsSandboxPlayerExtended): void {
+
+    }
+    constructor(physicsSandbox: SimuloPhysicsSandboxServerPlugin) {
+        this.physicsSandbox = physicsSandbox;
+    }
 }

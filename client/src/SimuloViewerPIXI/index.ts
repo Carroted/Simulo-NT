@@ -1,7 +1,9 @@
 import * as PIXI from "pixi.js";
 import { OutlineFilter } from '@pixi/filter-outline';
 import { Viewport } from "pixi-viewport";
-import type { Ball, Polygon, Cuboid, ShapeContentData, ShapeTransformData, Plane } from "../../../shared/src/SimuloPhysicsServerP2";
+import type { Ball, Polygon, Cuboid, Plane } from "../../../shared/src/ShapeContentData";
+import ShapeContentData from "../../../shared/src/ShapeContentData";
+import ShapeTransformData from "../../../shared/src/ShapeTransformData";
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 import { SmoothGraphics, LINE_SCALE_MODE, settings } from '@pixi/graphics-smooth';
 

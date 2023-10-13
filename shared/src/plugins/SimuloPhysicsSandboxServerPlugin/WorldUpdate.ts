@@ -1,6 +1,7 @@
-import type { ShapeContentData, SimuloPhysicsStepInfo } from "../../SimuloPhysicsServerP2"
-import type OverlayShape from "./OverlayShape"
-import type OverlayText from "./OverlayText"
+import ShapeContentData from "../../ShapeContentData";
+import SimuloPhysicsStepInfo from "../../SimuloPhysicsStepInfo";
+import type OverlayShape from "./OverlayShape";
+import type OverlayText from "./OverlayText";
 
 export default interface WorldUpdate extends SimuloPhysicsStepInfo {
     overlays: {
