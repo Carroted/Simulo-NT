@@ -472,8 +472,8 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
             4 * 2;
 
         let groundPlane = this.addCuboid({
-            width: 1000,
-            height: 500,
+            width: 2000,
+            height: 1000,
             depth: 1,
             color: 0xa1acfa,
             alpha: 1,
