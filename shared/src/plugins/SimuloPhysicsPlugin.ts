@@ -24,7 +24,9 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
         this.physicsServer = new SimuloPhysicsServerRapier();
     }
     async init() {
-        // oops i forgot to do anything
+        if (this.physicsServer instanceof SimuloPhysicsServerRapier) {
+            await this.physicsServer.init();
+        }
     }
     start(): void {
         console.log("start");
