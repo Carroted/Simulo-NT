@@ -511,7 +511,7 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
                 let colliderDesc = RAPIER.ColliderDesc.cuboid(ground.hx, ground.hy);
                 world.createCollider(colliderDesc, body);*/
                 this.addCuboid({
-                    width: ground.hx, height: ground.hy, depth: 1,
+                    width: ground.hx * 2, height: ground.hy * 2, depth: 1,
                     color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
                     alpha: 1,
                     border: null,
@@ -552,7 +552,7 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
                     let colliderDesc = RAPIER.ColliderDesc.cuboid(rad, rad);
                     world.createCollider(colliderDesc, body);*/
                     this.addCuboid({
-                        width: rad, height: rad, depth: 1,
+                        width: rad * 2, height: rad * 2, depth: 1,
                         color: randomColor(0, 1, 0.3, 0.8, 0.4, 1),
                         alpha: 1,
                         border: null,
@@ -689,7 +689,7 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
 
         let body = this.world.createRigidBody(bodyDesc);
         // no collide
-        let colliderDesc = RAPIER.ColliderDesc.cuboid(rectangle.width, rectangle.height).setRestitution(rectangle.restitution).setFriction(rectangle.friction).setDensity(rectangle.density)
+        let colliderDesc = RAPIER.ColliderDesc.cuboid(rectangle.width / 2, rectangle.height / 2).setRestitution(rectangle.restitution).setFriction(rectangle.friction).setDensity(rectangle.density)
             .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
         let coll = this.world.createCollider(colliderDesc!, body);
 
