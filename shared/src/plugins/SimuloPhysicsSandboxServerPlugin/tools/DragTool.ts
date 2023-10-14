@@ -4,6 +4,7 @@ import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 import type SimuloObjectData from "../../../SimuloObjectData";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
 import SimuloObject from "../../../SimuloObject";
+import SimuloSpring from "../../../SimuloSpring";
 
 export default class DragTool implements PhysicsSandboxTool {
     name = "Drag";
@@ -12,9 +13,8 @@ export default class DragTool implements PhysicsSandboxTool {
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 
-    /*springs: { [id: string]: p2.LinearSpring | null } = {};
+    springs: { [id: string]: SimuloSpring | null } = {};
     startPoints: { [id: string]: { x: number, y: number } | null } = {};
-    groundBodies: { [id: string]: SimuloObject | null } = {}; // in box2d, ground bodies are used to anchor joints to the world, we reuse that name because its familiar
 
     constructor(physicsSandbox: SimuloPhysicsSandboxServerPlugin) {
         this.physicsSandbox = physicsSandbox;
@@ -22,25 +22,19 @@ export default class DragTool implements PhysicsSandboxTool {
 
     playerDown(player: PhysicsSandboxPlayer) {
         this.startPoints[player.id] = { x: player.x, y: player.y };
-        let target = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
+        let target = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint({ x: player.x, y: player.y, z: 0 });
         if (target) {
             let bodyA = target;
             if (this.springs[player.id]) {
                 this.physicsSandbox.physicsPlugin.physicsServer.removeSpring(this.springs[player.id]!);
                 this.springs[player.id] = null;
             }
-            let ground = this.groundBodies[player.id];
-            if (!ground) {
-                ground = new p2.Body();
-                this.physicsSandbox.physicsPlugin.physicsServer.world.addBody(ground);
-                this.groundBodies[player.id] = ground;
-            }
             this.springs[player.id] = this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
-                bodyA,
-                bodyB: ground,
+                objectA: bodyA,
+                objectB: null,
                 stiffness: 5,
-                localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA, [player.x, player.y]),
-                localAnchorB: [0, 0],
+                localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalObjectPoint(bodyA, { x: player.x, y: player.y, z: 0 }),
+                localAnchorB: { x: player.x, y: player.y, z: 0 },
                 damping: 0.1,
                 restLength: 0,
             });
@@ -48,11 +42,12 @@ export default class DragTool implements PhysicsSandboxTool {
     }
     playerMove(player: PhysicsSandboxPlayer) {
         if (!player.down) return;
-        if (!this.groundBodies[player.id]) return;
-
-        let ground = this.groundBodies[player.id]!;
-        ground.position[0] = player.x;
-        ground.position[1] = player.y;
+        if (!this.springs[player.id]) return;
+        this.springs[player.id]!.setLocalAnchorB({
+            x: player.x,
+            y: player.y,
+            z: 0,
+        });
     }
     playerUp(player: PhysicsSandboxPlayerExtended) {
         // if its at same point it started at, change selection
@@ -66,21 +61,5 @@ export default class DragTool implements PhysicsSandboxTool {
         this.physicsSandbox.physicsPlugin.physicsServer.removeSpring(this.springs[player.id]!);
         this.springs[player.id] = null;
     }
-    update(player: PhysicsSandboxPlayer) { }*/
-
-    playerDown(player: PhysicsSandboxPlayerExtended): void {
-
-    }
-    playerMove(player: PhysicsSandboxPlayerExtended): void {
-
-    }
-    playerUp(player: PhysicsSandboxPlayerExtended): void {
-
-    }
-    update(player: PhysicsSandboxPlayerExtended): void {
-
-    }
-    constructor(physicsSandbox: SimuloPhysicsSandboxServerPlugin) {
-        this.physicsSandbox = physicsSandbox;
-    }
+    update(player: PhysicsSandboxPlayer) { }
 }

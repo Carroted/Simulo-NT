@@ -16,7 +16,9 @@ import CollisionSound from "../CollisionSound";
 import SimuloPhysicsStepInfo from "../SimuloPhysicsStepInfo";
 import SavedWorldState from "../SavedWorldState";
 
-/** Simulo creates fake spring joint with `applyImpulseAtPoint` on two bodies.
+import SimuloSpring from "../SimuloSpring";
+
+/** Simulo Rapier creates fake spring joint with `applyImpulseAtPoint` on two bodies.
  * 
  * Since you provide your own functions like `getBodyAPosition`, this is general-purpose, and you can do things like attach one end to a mouse cursor. */
 
@@ -53,6 +55,7 @@ interface SimuloSpringDesc {
 }
 
 /** Interactive class for Simulo spring */
+/*
 class SimuloSpring {
     readonly id: string;
     private desc: SimuloSpringDesc;
@@ -182,7 +185,7 @@ class SimuloSpring {
     destroy() {
         delete this.server.springs[this.id];
     }
-}
+}*/
 
 import BaseShapeData from "../BaseShapeData";
 import SimuloPhysicsServer from "../SimuloPhysicsServer";
@@ -342,7 +345,18 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
             targetLength: spring.restLength,
         };
         this.springs[id] = springDesc;
-        return new SimuloSpring(this, springDesc, id);
+        return {
+            destroy: () => {
+                delete this.springs[id];
+            },
+            setLocalAnchorA: (localAnchorA: { x: number, y: number, z: number }) => {
+                springDesc.localAnchorA = new RAPIER.Vector2(localAnchorA.x, localAnchorA.y);
+            },
+            setLocalAnchorB: (localAnchorB: { x: number, y: number, z: number }) => {
+                springDesc.localAnchorB = new RAPIER.Vector2(localAnchorB.x, localAnchorB.y);
+            },
+            reference: id,
+        };
     }
 
     addAxle(axle: {
@@ -470,107 +484,6 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
         this.world.maxVelocityIterations = 4;
         this.world.maxVelocityFrictionIterations =
             4 * 2;
-
-        let groundPlane = this.addCuboid({
-            width: 2000,
-            height: 1000,
-            depth: 1,
-            color: 0xa1acfa,
-            alpha: 1,
-            border: null,
-            name: 'joe',
-            sound: '/assets/sounds/impact.wav',
-            borderWidth: 1,
-            borderScaleWithZoom: true,
-            image: null,
-            zDepth: 0,
-            position: { x: 0, y: -510 },
-            isStatic: true,
-            friction: 0.5,
-            restitution: 0.5,
-            density: 1,
-        });
-
-
-
-        {
-            // Create Ground.
-            let groundSize = 40.0;
-            let grounds = [
-                { x: 0.0, y: 0.0, hx: groundSize, hy: 0.1 },
-                { x: -groundSize, y: groundSize, hx: 0.1, hy: groundSize },
-                { x: groundSize, y: groundSize, hx: 0.1, hy: groundSize },
-            ];
-
-            grounds.forEach((ground) => {
-                /*let bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(
-                    ground.x,
-                    ground.y,
-                );
-                let body = world.createRigidBody(bodyDesc);
-                let colliderDesc = RAPIER.ColliderDesc.cuboid(ground.hx, ground.hy);
-                world.createCollider(colliderDesc, body);*/
-                this.addCuboid({
-                    width: ground.hx * 2, height: ground.hy * 2, depth: 1,
-                    color: randomColor(0, 1, 0.5, 0.8, 0.8, 1),
-                    alpha: 1,
-                    border: null,
-                    name: 'joe',
-                    sound: '/assets/sounds/impact.wav',
-                    borderWidth: 1,
-                    borderScaleWithZoom: true,
-                    image: null,
-                    zDepth: 0,
-                    position: { x: ground.x, y: ground.y },
-                    isStatic: true,
-                    friction: 0.5,
-                    restitution: 0,
-                    density: 1,
-                });
-            });
-
-            // Dynamic cubes.
-            let num = 20;
-            let numy = 50;
-            let rad = 1.0;
-
-            let shift = rad * 2.0 + rad;
-            let centerx = shift * (num / 2);
-            let centery = shift / 2.0;
-
-            let i, j;
-
-            for (j = 0; j < numy; ++j) {
-                for (i = 0; i < num; ++i) {
-                    let x = i * shift - centerx;
-                    let y = j * shift + centery + 3.0;
-
-                    /*
-                    // Create dynamic cube.
-                    let bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y);
-                    let body = world.createRigidBody(bodyDesc);
-                    let colliderDesc = RAPIER.ColliderDesc.cuboid(rad, rad);
-                    world.createCollider(colliderDesc, body);*/
-                    this.addCuboid({
-                        width: rad * 2, height: rad * 2, depth: 1,
-                        color: randomColor(0, 1, 0.3, 0.8, 0.4, 1),
-                        alpha: 1,
-                        border: null,
-                        name: 'joe',
-                        sound: '/assets/sounds/impact.wav',
-                        borderWidth: 1,
-                        borderScaleWithZoom: true,
-                        image: null,
-                        zDepth: 0,
-                        position: { x: x, y: y },
-                        isStatic: false,
-                        friction: 0.5,
-                        restitution: 0,
-                        density: 1,
-                    });
-                }
-            }
-        }
     }
 
     /** multiple gon */
@@ -579,13 +492,14 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
     }): SimuloObject {
         if (!this.world) { throw new Error('init world first'); }
         let pointsRaw = polygon.points.map((point) => [point.x, point.y]);
-        if (!polygonDecomp.isSimple(pointsRaw)) {
-            //throw new Error('Polygon is not simple, stop being so interesting, complex and unique');
-        }
 
         polygonDecomp.makeCCW(pointsRaw);
-        polygonDecomp.removeDuplicatePoints(pointsRaw, 0.01);
-        polygonDecomp.removeCollinearPoints(pointsRaw, 0.1);
+        polygonDecomp.removeDuplicatePoints(pointsRaw, 0.05);
+        polygonDecomp.removeCollinearPoints(pointsRaw, 0.15);
+
+        if (!polygonDecomp.isSimple(pointsRaw)) {
+            throw new Error('Polygon is not simple');
+        }
 
         let polygons: number[][][] = polygonDecomp.quickDecomp(pointsRaw);
         let colliders: Rapier.Collider[] = [];
@@ -1195,10 +1109,38 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
         }
         return body.userData as SimuloObjectData;
     }
-    removeSpring(spring: any): void {
-        delete this.springs[spring.id];
+    removeSpring(spring: SimuloSpring): void {
+        delete this.springs[spring.reference];
+    }
+
+    destroy(): void {
+        // we have to shut down the physics engine
+        if (this.world) {
+            this.world.free();
+        }
+        this.world = null;
+    }
+
+    getLocalObjectPoint(object: SimuloObject, worldPoint: { x: number; y: number; z: number; }): { x: number; y: number; z: number; } {
+        if (!this.world) { throw new Error('init world first'); }
+        let body = object.reference;
+        if (!(body instanceof RAPIER.RigidBody)) {
+            throw new Error('Invalid object');
+        }
+        let localPoint = this.getLocalPoint(body.translation(), body.rotation(), new RAPIER.Vector2(worldPoint.x, worldPoint.y));
+        return { x: localPoint.x, y: localPoint.y, z: 0 };
+    }
+
+    getWorldObjectPoint(object: SimuloObject, localPoint: { x: number; y: number; z: number; }): { x: number; y: number; z: number; } {
+        if (!this.world) { throw new Error('init world first'); }
+        let body = object.reference;
+        if (!(body instanceof RAPIER.RigidBody)) {
+            throw new Error('Invalid object');
+        }
+        let worldPoint = this.getWorldPoint(body.translation(), body.rotation(), new RAPIER.Vector2(localPoint.x, localPoint.y));
+        return { x: worldPoint.x, y: worldPoint.y, z: 0 };
     }
 }
 
 export default SimuloPhysicsServerRapier;
-export type { ShapeContentData, Polygon, Cuboid, Ball, ShapeTransformData, SimuloPhysicsStepInfo, SimuloSpring };
+export type { ShapeContentData, Polygon, Cuboid, Ball, ShapeTransformData, SimuloPhysicsStepInfo };

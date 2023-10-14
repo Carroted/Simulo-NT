@@ -115,6 +115,50 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         let utilityBar = document.createElement('div');
         utilityBar.className = 'panel bar utilities';
         utilityBar.style.display = 'none';
+
+        let people = document.createElement('div');
+        people.className = 'people item';
+        this.fetchSVG('./icons/account-multiple.svg').then((svg) => {
+            people.innerHTML = svg;
+        });
+        // for now it just logs
+        people.addEventListener('click', (e) => {
+            console.log('people');
+        });
+        utilityBar.appendChild(people);
+
+        // now for timeline-plus
+        let addUndoEntry = document.createElement('div');
+        addUndoEntry.className = 'add-undo-entry item';
+        this.fetchSVG('./icons/timeline-plus.svg').then((svg) => {
+            addUndoEntry.innerHTML = svg;
+        });
+        // for now it just logs
+        addUndoEntry.addEventListener('click', (e) => {
+            console.log('add undo entry');
+        });
+        utilityBar.appendChild(addUndoEntry);
+
+        {
+            // .divider
+            let divider = document.createElement('div');
+            divider.className = 'divider';
+            utilityBar.appendChild(divider);
+        }
+
+        // ok so now we want undo and redo
+        // svgs are arrow-u-left-top and arrow-u-right-top
+        let undo = document.createElement('div');
+        undo.className = 'undo item';
+        this.fetchSVG('./icons/arrow-u-left-top.svg').then((svg) => {
+            undo.innerHTML = svg;
+        });
+        // for now it just logs
+        undo.addEventListener('click', (e) => {
+            console.log('undo');
+        });
+        utilityBar.appendChild(undo);
+
         let pausePlay = document.createElement('div');
         pausePlay.className = 'pause-play item';
         let pauseDiv = document.createElement('div');
@@ -134,6 +178,49 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
             this.togglePaused();
         });
         this.pausePlay = utilityBar.appendChild(pausePlay);
+
+        let redo = document.createElement('div');
+        redo.className = 'redo item';
+        this.fetchSVG('./icons/arrow-u-right-top.svg').then((svg) => {
+            redo.innerHTML = svg;
+        });
+
+        // for now it just logs
+        redo.addEventListener('click', (e) => {
+            console.log('redo');
+        });
+        utilityBar.appendChild(redo);
+
+        {
+            // .divider
+            let divider = document.createElement('div');
+            divider.className = 'divider';
+            utilityBar.appendChild(divider);
+        }
+
+        // earth
+        let worldSettings = document.createElement('div');
+        worldSettings.className = 'world-settings item';
+        this.fetchSVG('./icons/earth.svg').then((svg) => {
+            worldSettings.innerHTML = svg;
+        });
+        // for now it just logs
+        worldSettings.addEventListener('click', (e) => {
+            console.log('world settings');
+        });
+        utilityBar.appendChild(worldSettings);
+
+        // grid
+        let grid = document.createElement('div');
+        grid.className = 'grid item';
+        this.fetchSVG('./icons/grid.svg').then((svg) => {
+            grid.innerHTML = svg;
+        });
+        // for now it just logs
+        grid.addEventListener('click', (e) => {
+            console.log('grid');
+        });
+        utilityBar.appendChild(grid);
 
         this.utilityBar = document.body.appendChild(utilityBar);
 
@@ -168,25 +255,43 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
 
     toolElements: { [id: string]: HTMLDivElement } = {};
 
-    async updateToolBar(tools: {
+    async updateToolBar(toolsLists: ({
         name: string,
         icon: string,
         description: string,
         id: string
-    }[], toolID: string) {
+    } | null)[][], toolID: string) {
         this.utilityBar.style.display = 'flex';
         this.toolBar.style.display = 'grid';
         this.toolBar.innerHTML = '';
         this.toolElements = {};
-        for (let tool of tools) {
-            const toolElement = document.createElement('div');
-            toolElement.className = toolID === tool.id ? 'tool item active' : 'tool item';
-            toolElement.innerHTML = await this.fetchSVG(tool.icon);
-            toolElement.addEventListener('click', (e) => {
-                this.controller.emit('player_tool', tool.id);
-            });
+        for (let i = 0; i < toolsLists.length; i++) {
+            let tools = toolsLists[i];
+            // if its not first one, add .divider.horizontal div
+            if (i !== 0) {
+                let divider = document.createElement('div');
+                divider.className = 'divider horizontal';
+                // span 2 columns
+                divider.style.gridColumn = 'span 2';
+                this.toolBar.appendChild(divider);
+            }
+            for (let tool of tools) {
+                if (!tool) {
+                    // div
+                    let div = document.createElement('div');
+                    div.className = 'tool item';
+                    this.toolBar.appendChild(div);
+                    continue;
+                }
+                const toolElement = document.createElement('div');
+                toolElement.className = toolID === tool.id ? 'tool item active' : 'tool item';
+                toolElement.innerHTML = await this.fetchSVG(tool.icon);
+                toolElement.addEventListener('click', (e) => {
+                    this.controller.emit('player_tool', tool!.id);
+                });
 
-            this.toolElements[tool.id] = this.toolBar.appendChild(toolElement);
+                this.toolElements[tool.id] = this.toolBar.appendChild(toolElement);
+            }
         }
     }
 
@@ -197,12 +302,12 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
             this.viewer.update(worldUpdate);
         }
         if (event === 'tools') {
-            let tools = data.tools as {
+            let tools = data.tools as ({
                 name: string,
                 icon: string,
                 description: string,
                 id: string
-            }[];
+            } | null)[][];
             let tool = data.tool as string;
             this.updateToolBar(tools, tool);
         }

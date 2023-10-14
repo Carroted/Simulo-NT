@@ -3,6 +3,7 @@ import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 
 import randomColor from "../../../randomColor";
+import { Polygon } from "../../../ShapeContentData";
 
 export default class PolygonTool implements PhysicsSandboxTool {
     name = "Polygon";
@@ -26,22 +27,15 @@ export default class PolygonTool implements PhysicsSandboxTool {
         // make sure its more than 0.1 away
         if (!this.points[player.id] || this.points[player.id].length < 1) return;
         let lastPoint = this.points[player.id][this.points[player.id].length - 1];
-        if (Math.abs(lastPoint.x - player.x) < 0.5 && Math.abs(lastPoint.y - player.y) < 0.5) return;
+        if (Math.abs(lastPoint.x - player.x) < 1.5 && Math.abs(lastPoint.y - player.y) < 1.5) return;
         this.points[player.id].push({ x: player.x, y: player.y });
     }
     playerUp(player: PhysicsSandboxPlayer) {
         let points = this.points[player.id];
         if (!points || points.length < 3) return;
-        // remove double point, then check length again
-        let filteredPoints = points.filter((point, index) => {
-            return index === 0 || !(point.x === points[index - 1].x && point.y === points[index - 1].y);
-        });
-        // add start point to end
-        filteredPoints.push(filteredPoints[0]);
-        if (filteredPoints.length < 3) return;
 
         this.physicsSandbox.physicsPlugin.physicsServer.addPolygon({
-            points: filteredPoints,
+            points,
             color: this.color ?? 0xffffff,
             alpha: 1,
             name: "Rectangle",
@@ -61,30 +55,29 @@ export default class PolygonTool implements PhysicsSandboxTool {
     }
 
     update(player: PhysicsSandboxPlayer) {
-        /*let startPoint = this.startPoints[player.id];
+        let points = this.points[player.id];
+        if (!points || points.length < 3) return;
 
-        if (startPoint) {
-            // add overlays
-            this.physicsSandbox.addOverlayShape({
-                content: {
-                    width: Math.abs(startPoint.x - player.x),
-                    height: Math.abs(startPoint.y - player.y),
-                    depth: 1,
-                    color: this.color ?? 0xffffff,
-                    alpha: 0.5,
-                    zDepth: 0,
-                    type: "cuboid",
-                    border: 0xffffff,
-                    id: "rectangleToolOverlay",
-                    borderWidth: 0.1,
-                } as Cuboid,
-                transform: {
-                    x: (startPoint.x + player.x) / 2,
-                    y: (startPoint.y + player.y) / 2,
-                    z: 0,
-                    angle: 0,
-                }
-            });
-        }*/
+        // draw polygon
+        this.physicsSandbox.addOverlayShape({
+            content: {
+                points: points.map(point => ([point.x, point.y])) as [number, number][],
+                color: this.color ?? 0xffffff,
+                alpha: 0.5,
+                zDepth: 0,
+                type: "polygon",
+                border: 0xffffff,
+                id: "polygonToolOverlay",
+                borderWidth: 0.1,
+                name: "Polygon",
+                description: null
+            } as Polygon,
+            transform: {
+                x: 0,
+                y: 0,
+                z: 0,
+                angle: 0,
+            }
+        });
     }
 }

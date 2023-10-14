@@ -96,6 +96,12 @@ html {
     padding: 0.5rem;
 }
 
+.bar.tools .item {
+    width: 2.2rem;
+    height: 2.2rem;
+    padding: 0.2rem;
+}
+
 .bar.menus {
     top: 0.5rem;
     height: 1.5rem;
@@ -131,6 +137,10 @@ html {
     transform: translateX(-50%);
 }
 
+.bar.utilities svg {
+    fill: #e0ddff50;
+}
+
 .bar *:hover>svg {
     fill: #ddddddb0;
     filter: drop-shadow(0px 0px 20px #ffffffa0);
@@ -144,6 +154,21 @@ html {
 .bar *.active>svg {
     fill: #ffffff;
     filter: drop-shadow(0px 0px 10px #ffffffa0);
+}
+
+/* divider defaults vertical */
+.panel .divider {
+    width: 0.12rem;
+    height: 100%;
+    background: #ffffff10;
+    margin: 0 0.5rem;
+    border-radius: 1000rem;
+}
+
+.panel .divider.horizontal {
+    width: 100%;
+    height: 0.12rem;
+    margin: 0.5rem 0;
 }
 
 .utilities .utility .line {
@@ -188,24 +213,48 @@ html {
     width: 1.8rem;
 }
 
-.pause-play .pause {
-    display: contents;
-}
-
+.pause-play .pause,
 .pause-play .play {
-    display: none;
+    position: absolute;
+    top: 0;
 }
 
-.pause-play.paused .pause {
-    display: none;
+.pause-play .pause svg,
+.pause-play .play svg {
+    transition: opacity 0.1s ease-in-out;
 }
 
-.pause-play.paused .play {
-    display: contents;
+.pause-play .play svg {
+    opacity: 0;
+}
+
+.pause-play .pause svg {
+    opacity: 1;
+}
+
+.pause-play.paused .pause svg {
+    opacity: 0;
+}
+
+.pause-play.paused .play svg {
+    opacity: 1;
 }
 
 .bar .pause-play.item {
     width: 3rem;
     height: 3rem;
     padding: 0.1rem;
+    position: relative;
+}
+
+.bar .pause-play svg {
+    fill: #e0ddff70;
+}
+
+.bar .pause-play:hover svg {
+    fill: #e0ddffd0;
+}
+
+.bar .pause-play:active svg {
+    fill: #ffffff;
 }

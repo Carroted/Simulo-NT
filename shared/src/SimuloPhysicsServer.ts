@@ -6,6 +6,7 @@ import ShapeTransformData from "./ShapeTransformData";
 import SimuloObject from "./SimuloObject";
 import SimuloObjectData from "./SimuloObjectData";
 import SimuloPhysicsStepInfo from "./SimuloPhysicsStepInfo";
+import SimuloSpring from "./SimuloSpring";
 
 export default interface SimuloPhysicsServer {
     /** Steps the world, then returns step from `getStepInfo`. */
@@ -38,12 +39,15 @@ export default interface SimuloPhysicsServer {
         restLength: number;
         localAnchorA: { x: number, y: number, z: number };
         localAnchorB: { x: number, y: number, z: number };
-    }): any;
-    removeSpring(spring: any): void;
-    // getLocalPoint(object: SimuloObject, worldPoint: { x: number, y: number, z: number }): { x: number, y: number, z: number };
-    // getWorldPoint(object: SimuloObject, localPoint: { x: number, y: number, z: number }): { x: number, y: number, z: number };
+    }): SimuloSpring;
+    removeSpring(spring: SimuloSpring): void;
+    getLocalPoint(object: SimuloObject, worldPoint: { x: number, y: number, z: number }): { x: number, y: number, z: number };
+    getWorldPoint(object: SimuloObject, localPoint: { x: number, y: number, z: number }): { x: number, y: number, z: number };
     getObjectData(object: SimuloObject): SimuloObjectData | null;
     getObjectByID(id: string): SimuloObject | null;
     saveScene(): SavedWorldState;
     getSimuloObject(reference: any): SimuloObject | null;
+
+    /** Responsibly shut down the physics server. */
+    destroy(): void;
 }

@@ -12,6 +12,8 @@ import { Polygon, Plane, Ball, Cuboid } from "../ShapeContentData";
 import SimuloSpringInfo from "../SimuloSpringInfo";
 import SimuloPhysicsServer from "../SimuloPhysicsServer";
 import SimuloObject from "../SimuloObject";
+import SavedWorldState from "../SavedWorldState";
+import SimuloSpring from "../SimuloSpring";
 
 class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
     world: p2.World;
@@ -28,102 +30,6 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
         this.world = new p2.World({
             gravity: [0, -9.81]
         });
-        let plane = new p2.Body({
-            mass: 0
-        });
-        let planeShape = new p2.Plane();
-        plane.addShape(planeShape);
-        this.world.addBody(plane);
-        this.objectDatas[plane.id] = {
-            id: plane.id.toString(),
-            name: "Simulo Planet",
-            sound: null,
-            color: 0xa1acfa,
-            alpha: 1,
-            border: null,
-            borderWidth: null,
-            image: null,
-            zDepth: 1,
-            borderScaleWithZoom: false,
-        };
-        this.changedContents[planeShape.id] = this.getShapeContent(plane)!;
-
-        // Create Ground.
-        let groundSize = 40.0;
-        let grounds = [
-            { x: 0.0, y: 0.0, hx: groundSize, hy: 0.1 },
-            { x: -groundSize, y: groundSize, hx: 0.1, hy: groundSize },
-            { x: groundSize, y: groundSize, hx: 0.1, hy: groundSize },
-        ];
-
-        grounds.forEach((ground) => {
-            /*let bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(
-                ground.x,
-                ground.y,
-            );
-            let body = world.createRigidBody(bodyDesc);
-            let colliderDesc = RAPIER.ColliderDesc.cuboid(ground.hx, ground.hy);
-            world.createCollider(colliderDesc, body);*/
-            this.addRectangle({
-                width: ground.hx * 2, height: ground.hy * 2,
-                color: 0xa1acfa,
-                alpha: 1,
-                border: null,
-                name: 'joe',
-                sound: '/assets/sounds/impact.wav',
-                borderWidth: 1,
-                borderScaleWithZoom: true,
-                image: null,
-                zDepth: 0,
-                position: { x: ground.x, y: ground.y },
-                isStatic: true,
-                friction: 0.5,
-                restitution: 0,
-                density: 0,
-            });
-        });
-
-        // Dynamic cubes.
-        let num = 20;
-        let numy = 50;
-        let rad = 1.0;
-
-        let shift = rad * 2.0 + rad;
-        let centerx = shift * (num / 2);
-        let centery = shift / 2.0;
-
-        let i, j;
-
-        for (j = 0; j < numy; ++j) {
-            for (i = 0; i < num; ++i) {
-                let x = i * shift - centerx;
-                let y = j * shift + centery + 3.0;
-
-                /*
-                // Create dynamic cube.
-                let bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y);
-                let body = world.createRigidBody(bodyDesc);
-                let colliderDesc = RAPIER.ColliderDesc.cuboid(rad, rad);
-                world.createCollider(colliderDesc, body);*/
-                this.addRectangle({
-                    width: rad * 2, height: rad * 2,
-                    color: 0xa1acfa,
-                    alpha: 1,
-                    border: null,
-                    name: 'joe',
-                    sound: '/assets/sounds/impact.wav',
-                    borderWidth: 1,
-                    borderScaleWithZoom: true,
-                    image: null,
-                    zDepth: 0,
-                    position: { x: x, y: y },
-                    isStatic: false,
-                    friction: 0.5,
-                    restitution: 0,
-                    density: 1,
-                });
-            }
-        }
     }
 
     step(): SimuloPhysicsStepInfo {
@@ -194,6 +100,12 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
     destroyBody(body: p2.Body) {
         this.world.removeBody(body);
         this.removedContents.push(body.shapes[0].id.toString());
+    }
+
+    destroyObject(object: SimuloObject): void {
+        if (object.reference instanceof p2.Body) {
+            this.destroyBody(object.reference);
+        }
     }
 
     addPolygon(polygon: BaseShapeData & {
@@ -321,7 +233,7 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
         });
     }
 
-    getObjectsInRect(startPoint: { x: number, y: number }, endPoint: { x: number, y: number }): p2.Body[] {
+    getObjectsInCuboid(startPoint: { x: number, y: number }, endPoint: { x: number, y: number }): SimuloObject[] {
         let intersection = this.world.broadphase.aabbQuery(this.world, new p2.AABB({
             lowerBound: [Math.min(startPoint.x, endPoint.x), Math.min(startPoint.y, endPoint.y)],
             upperBound: [Math.max(startPoint.x, endPoint.x), Math.max(startPoint.y, endPoint.y)]
@@ -332,12 +244,15 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
             return !(body.shapes[0] instanceof p2.Plane);
         });
 
-        return bodies;
+        return bodies.map((body) => {
+            return this.getSimuloObject(body)!;
+        });
     }
 
-    addCircle(circle: BaseShapeData & {
+    addBall(circle: BaseShapeData & {
         radius: number;
-    }) {
+        cakeSlice: boolean;
+    }): SimuloObject {
         let body = new p2.Body({
             mass: 1
         });
@@ -359,14 +274,17 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
             image: null,
             zDepth: 1,
             borderScaleWithZoom: false,
+            circleCake: circle.cakeSlice
         };
         this.changedContents[body.shapes[0].id.toString()] = this.getShapeContent(body)!;
+        return this.getSimuloObject(body)!;
     }
 
-    addRectangle(rectangle: BaseShapeData & {
+    addCuboid(rectangle: BaseShapeData & {
         width: number;
         height: number;
-    }) {
+        depth: number;
+    }): SimuloObject {
         let body = new p2.Body({
             // we calculate mass based on density and width/height
             mass: rectangle.isStatic ? 0 : ((rectangle.density / 10) * rectangle.width * rectangle.height)
@@ -399,6 +317,8 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
             borderScaleWithZoom: false,
         };
         this.changedContents[body.shapes[0].id.toString()] = this.getShapeContent(body)!;
+
+        return this.getSimuloObject(body)!;
     }
 
     addSpring(spring: {
@@ -418,11 +338,22 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
             localAnchorB: [spring.localAnchorB.x, spring.localAnchorB.y]
         });
         this.world.addSpring(constraint);
-        return constraint;
+        return {
+            destroy: () => {
+                this.world.removeSpring(constraint);
+            },
+            reference: constraint,
+            setLocalAnchorA: (anchor: { x: number, y: number, z: number }) => {
+                constraint.localAnchorA = [anchor.x, anchor.y];
+            },
+            setLocalAnchorB: (anchor: { x: number, y: number, z: number }) => {
+                constraint.localAnchorB = [anchor.x, anchor.y];
+            },
+        };
     }
 
-    removeSpring(spring: p2.LinearSpring) {
-        this.world.removeSpring(spring);
+    removeSpring(spring: SimuloSpring) {
+        this.world.removeSpring(spring.reference);
     }
 
     getLocalPoint(body: p2.Body, worldPoint: [number, number]): [number, number] {
@@ -436,6 +367,44 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
             body = body.reference;
         }
         return this.objectDatas[(body as p2.Body).id] || null;
+    }
+
+    getObjectByID(id: string): SimuloObject | null {
+        let body = this.world.getBodyByID(parseInt(id));
+        if (!body) return null;
+        return this.getSimuloObject(body);
+    }
+
+    saveScene(): SavedWorldState {
+        // nothing lmao
+        return {} as any;
+    }
+
+    destroy(): void {
+        // we have to shut down the physics engine
+        this.world.clear();
+        // @ts-ignore
+        this.world = null;
+    }
+
+    getLocalObjectPoint(object: SimuloObject, worldPoint: { x: number; y: number; z: number; }): { x: number; y: number; z: number; } {
+        let out = p2.vec2.create();
+        (object.reference as p2.Body).toLocalFrame(out, [worldPoint.x, worldPoint.y]);
+        return {
+            x: out[0],
+            y: out[1],
+            z: 0
+        };
+    }
+
+    getWorldObjectPoint(object: SimuloObject, localPoint: { x: number; y: number; z: number; }): { x: number; y: number; z: number; } {
+        let out = p2.vec2.create();
+        (object.reference as p2.Body).toWorldFrame(out, [localPoint.x, localPoint.y]);
+        return {
+            x: out[0],
+            y: out[1],
+            z: 0
+        };
     }
 }
 

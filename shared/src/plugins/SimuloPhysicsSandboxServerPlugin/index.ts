@@ -30,31 +30,55 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
     physicsPlugin: SimuloPhysicsPlugin;
     players: { [id: string]: PhysicsSandboxPlayerExtended } = {};
 
-    builtInTools: { [id: string]: PhysicsSandboxTool } = {
+    builtInTools: { [id: string]: (PhysicsSandboxTool | null) }[] = [{
+        "sketch": null,
+        "knife": null,
         "select_move": new SelectMoveTool(this),
         "drag": new DragTool(this),
+        "rotate": null,
+        "resize": null,
+    }, {
+        "brush": null,
+        "eraser": null,
+        "polygon": new PolygonTool(this),
+        "gear": null,
         "rectangle": new RectangleTool(this),
         "circle": new CircleTool(this),
+        "plane": null,
+        "chain": null,
+    }, {
         "spring": new SpringTool(this),
-        "polygon": new PolygonTool(this),
-        "axle": new AxleTool(this)
-    };
+        "bolt": null,
+        "axle": new AxleTool(this),
+        "thruster": null,
+        "laser": null,
+        "tracer": null,
+        "uv": null,
+    }];
 
-    getTools(): {
-        name: string,
-        icon: string,
-        description: string,
-        id: string
-    }[] {
-        return Object.keys(this.builtInTools).map((id) => {
-            let tool = this.builtInTools[id];
-            return {
-                name: tool.name,
-                icon: tool.icon,
-                description: tool.description,
-                id
-            }
+    getTools() {
+        let tools: ({
+            name: string,
+            icon: string,
+            description: string,
+            id: string
+        } | null)[][] = [];
+
+        this.builtInTools.forEach((builtInTools) => {
+            let toolsMapped = Object.keys(builtInTools).map((id) => {
+                let tool = builtInTools[id];
+                if (!tool) return null;
+                return {
+                    name: tool.name,
+                    icon: tool.icon,
+                    description: tool.description,
+                    id
+                }
+            });
+            tools.push(toolsMapped);
         });
+
+        return tools;
     }
 
     selectionUpdate(startPoint: {
@@ -144,10 +168,20 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
         this.overlayTexts = [];
         // fire tool update events for all players
         Object.keys(this.players).forEach(playerId => {
-            if (this.builtInTools[this.players[playerId].tool]) {
-                this.builtInTools[this.players[playerId].tool].update(this.players[playerId]);
+            let tool = this.getTool(this.players[playerId].tool);
+            if (tool) {
+                tool.update(this.players[playerId]);
             }
         });
+    }
+    getTool(id: string): PhysicsSandboxTool | null {
+        let tool = null;
+        this.builtInTools.forEach((builtInTools) => {
+            if (builtInTools[id]) {
+                tool = builtInTools[id];
+            }
+        });
+        return tool;
     }
     destroy(): void { }
     async handleIncomingEvent(event: string, data: any, id: string) {
@@ -174,23 +208,26 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
             // player_down fires when primary input is pressed, such as mouse left click
             if (event === 'player_down') {
                 this.players[id].down = true;
-                if (this.builtInTools[this.players[id].tool]) {
-                    this.builtInTools[this.players[id].tool].playerDown(this.players[id]);
+                let tool = this.getTool(this.players[id].tool);
+                if (tool) {
+                    tool.playerDown(this.players[id]);
                 }
             }
 
             // player_move is usually triggered by mouse movement, but can also be triggered by keyboard movement
             if (event === 'player_move') {
-                if (this.builtInTools[this.players[id].tool]) {
-                    this.builtInTools[this.players[id].tool].playerMove(this.players[id]);
+                let tool = this.getTool(this.players[id].tool);
+                if (tool) {
+                    tool.playerMove(this.players[id]);
                 }
             }
 
             // player_up fires when primary input is released, such as mouse left click
             if (event === 'player_up') {
                 this.players[id].down = false;
-                if (this.builtInTools[this.players[id].tool]) {
-                    this.builtInTools[this.players[id].tool].playerUp(this.players[id]);
+                let tool = this.getTool(this.players[id].tool);
+                if (tool) {
+                    tool.playerUp(this.players[id]);
                 }
             }
 

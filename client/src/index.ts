@@ -6,7 +6,7 @@ import SimuloClientController from "./SimuloClientController";
 
 console.log('test before doing anything');
 let server = new SimuloServerController();
-let physicsPlugin = new SimuloPhysicsPlugin(server);
+let physicsPlugin = new SimuloPhysicsPlugin(server, "rapier");
 await physicsPlugin.init();
 let physicsSandboxServerPlugin = new SimuloPhysicsSandboxServerPlugin(server, physicsPlugin);
 
@@ -46,3 +46,10 @@ server.startLoop();
 window.server = server;
 // @ts-ignore
 window.client = client;
+// @ts-ignore
+window.switchBackends = async (backend: "rapier" | "p2") => {
+    server.stopLoop();
+    await physicsPlugin.switchBackends(backend);
+    console.log('Switched backends');
+    server.startLoop();
+};
