@@ -261,8 +261,8 @@ export default class SimuloViewerPIXI implements SimuloViewer {
             // trace it from object pos - 20 to object pos + 20
             let gfx = new PIXI.Graphics();
             gfx.lineStyle(2 / this.viewport.scale.y, '#ffffff', 0.2);
-            for (let x = parabola.x - 40; x < parabola.x + 40; x += 0.1) {
-                if (x === parabola.x - 40) {
+            for (let x = parabola.x - 1000; x < parabola.x + 1000; x += 0.5) {
+                if (x === parabola.x - 1000) {
                     gfx.moveTo(x, -parabola.parabola(x));
                     continue;
                 }
