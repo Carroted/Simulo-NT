@@ -73,8 +73,8 @@ export default class SpringTool implements PhysicsSandboxTool {
             return;
         }
 
-        /*let targetA = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(startPoint.x, startPoint.y);
-        let targetB = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint(player.x, player.y);
+        let targetA = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint({ x: startPoint.x, y: startPoint.y, z: 0 });
+        let targetB = this.physicsSandbox.physicsPlugin.physicsServer.getObjectAtPoint({ x: player.x, y: player.y, z: 0 });
 
         if (!targetA && !targetB) return; // only return if both missing, otherwise we can do something like the above comment block
 
@@ -83,8 +83,23 @@ export default class SpringTool implements PhysicsSandboxTool {
 
         if (!bodyA && !bodyB) return; // only return if both missing, otherwise we can do something like the above comment block
 
+        this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
+            objectA: bodyA,
+            objectB: bodyB,
+            stiffness: 0.2,
+            damping: 0,
+            // distance between the start and player pos
+            restLength: (
+                Math.sqrt(
+                    Math.pow(player.x - startPoint.x, 2) +
+                    Math.pow(player.y - startPoint.y, 2)
+                )
+            ),
+            localAnchorA: bodyA ? this.physicsSandbox.physicsPlugin.physicsServer.getLocalObjectPoint(bodyA!, { x: startPoint.x, y: startPoint.y, z: 0 }) : { x: startPoint.x, y: startPoint.y, z: 0 },
+            localAnchorB: bodyB ? this.physicsSandbox.physicsPlugin.physicsServer.getLocalObjectPoint(bodyB!, { x: player.x, y: player.y, z: 0 }) : { x: player.x, y: player.y, z: 0 },
+        })
 
-        this.startPoints[player.id] = null;*/
+        this.startPoints[player.id] = null;
     }
     playerMove(player: PhysicsSandboxPlayer) { }
     update(player: PhysicsSandboxPlayer) {

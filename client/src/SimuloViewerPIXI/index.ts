@@ -7,6 +7,7 @@ import ShapeTransformData from "../../../shared/src/ShapeTransformData";
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 import { SmoothGraphics, LINE_SCALE_MODE, settings } from '@pixi/graphics-smooth';
 import SimuloViewer from "../SimuloViewer";
+import getParabola from "../getParabola";
 
 PIXI.curves.adaptive = false;
 
@@ -22,6 +23,7 @@ export default class SimuloViewerPIXI implements SimuloViewer {
     scene: PIXI.Container;
     viewport: Viewport;
     canvas: HTMLCanvasElement;
+    prevGFXPositions: { [id: string]: { x: number, y: number }[] } = {};
 
     /** Can pan the camera with keys like HJKL, or, for mere mortals, arrow keys */
     panInputs: {
@@ -99,6 +101,7 @@ export default class SimuloViewerPIXI implements SimuloViewer {
         }
     }
 
+    mouseDown = false;
 
     constructor() {
         this.audioChannels = {};
@@ -135,9 +138,11 @@ export default class SimuloViewerPIXI implements SimuloViewer {
             this.updateMouse("pointermove", { x: e.globalX, y: e.globalY }, e);
         });
         this.viewport.on("pointerdown", (e) => {
+            this.mouseDown = true;
             this.updateMouse("pointerdown", { x: e.globalX, y: e.globalY }, e);
         });
         this.viewport.on("pointerup", (e) => {
+            this.mouseDown = false;
             this.updateMouse("pointerup", { x: e.globalX, y: e.globalY }, e);
         });
 
@@ -238,20 +243,35 @@ export default class SimuloViewerPIXI implements SimuloViewer {
             this.addShape(content);
         }
         //if (Object.keys(worldUpdate.delta.shapeContent).length > 0) console.log('registered ' + Object.keys(worldUpdate.delta.shapeContent).length + ' shapes')
-        this.updatePositions(worldUpdate.delta.shapeTransforms);
+        let parabolas = this.updatePositions(worldUpdate.delta.shapeTransforms);
         // draw a line for each spring, will soon support images
         this.tempGFXs.forEach((gfx) => {
             this.viewport.removeChild(gfx)
         });
-        this.tempGFXs = []
+        this.tempGFXs = [];
         worldUpdate.springs.forEach((spring) => {
-            let gfx = new SmoothGraphics();
+            let gfx = new PIXI.Graphics();
             gfx.lineStyle(3 / this.viewport.scale.y, '#ffffff')
                 .moveTo(spring.pointA.x, -spring.pointA.y)
                 .lineTo(spring.pointB.x, -spring.pointB.y);
             this.tempGFXs.push(gfx)
             this.viewport.addChild(gfx);
         });
+        for (let parabola of parabolas) {
+            // trace it from object pos - 20 to object pos + 20
+            let gfx = new PIXI.Graphics();
+            gfx.lineStyle(2 / this.viewport.scale.y, '#ffffff', 0.5);
+            for (let x = parabola.x - 40; x < parabola.x + 40; x += 0.1) {
+                if (x === parabola.x - 40) {
+                    gfx.moveTo(x, -parabola.parabola(x));
+                    continue;
+                }
+                const y = parabola.parabola(x);
+                gfx.lineTo(x, -y);
+            }
+            this.tempGFXs.push(gfx)
+            this.viewport.addChild(gfx);
+        }
         worldUpdate.overlays.shapes.forEach((shape) => {
             let content = shape.content;
             let transform = shape.transform;
@@ -332,7 +352,14 @@ export default class SimuloViewerPIXI implements SimuloViewer {
         this.viewport.moveCenter(pos.target.x, pos.target.y);
     }
 
-    updatePositions(transformData: { [id: string]: ShapeTransformData }) {
+    updatePositions(transformData: { [id: string]: ShapeTransformData }): {
+        parabola: (x: number) => number,
+        x: number
+    }[] {
+        let parabolas: {
+            parabola: (x: number) => number,
+            x: number
+        }[] = [];
         Object.keys(transformData).forEach((id) => {
             let gfx = this.coll2gfx.get(id);
             let data = transformData[id];
@@ -343,8 +370,39 @@ export default class SimuloViewerPIXI implements SimuloViewer {
                 gfx.gfx.position.x = position.x;
                 gfx.gfx.position.y = -position.y;
                 gfx.gfx.rotation = -angle;
+                if (gfx.gfx instanceof SmoothGraphics) {
+                    if (!this.prevGFXPositions[id]) {
+                        this.prevGFXPositions[id] = [];
+                    }
+                    let prevPos = this.prevGFXPositions[id];
+                    // if more than two
+                    if (prevPos.length > 2) {
+                        // set entire array to the last ones
+                        this.prevGFXPositions[id] = [prevPos[prevPos.length - 2], prevPos[prevPos.length - 1]];
+                    }
+                    this.prevGFXPositions[id].push({ x: position.x, y: position.y });
+                    prevPos = this.prevGFXPositions[id];
+
+                    // if Three, we can parabolaify as long as mouse is not down
+                    if (prevPos.length === 3 && !this.mouseDown) {
+                        // make sure x dist between first and last is enough
+                        let dist = Math.abs(prevPos[0].x - prevPos[2].x);
+                        if (dist >= 0.1) {
+                            let parabola = getParabola(
+                                [prevPos[0].x, prevPos[0].y],
+                                [prevPos[1].x, prevPos[1].y],
+                                [prevPos[2].x, prevPos[2].y],
+                            );
+                            parabolas.push({
+                                parabola: parabola,
+                                x: position.x
+                            });
+                        }
+                    }
+                }
             }
         });
+        return parabolas;
     }
 
     reset() {
@@ -353,6 +411,7 @@ export default class SimuloViewerPIXI implements SimuloViewer {
             gfx.gfx.destroy();
         });
         this.coll2gfx = new Map();
+        this.prevGFXPositions = {};
     }
 
     renderShape(content: ShapeContentData) {

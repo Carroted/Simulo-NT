@@ -359,6 +359,13 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
         };
     }
 
+    axles: {
+        [body1Handle: number]: {
+            body2Handle: number;
+            joint: RAPIER.RevoluteImpulseJoint;
+        }
+    } = {};
+
     addAxle(axle: {
         bodyA: SimuloObject;
         bodyB: SimuloObject;
@@ -375,11 +382,17 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
         for (let i = 0; i < colliderACount; i++) {
             let collider = axle.bodyA.reference.collider(i);
             //collider.setCollisionGroups(0);
+            collider.setActiveHooks(RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS);
         }
         for (let i = 0; i < colliderBCount; i++) {
-            let collider = axle.bodyB.reference.collider(i);
-            collider.setCollisionGroups(0);
+            let collider = (axle.bodyB.reference as RAPIER.RigidBody).collider(i);
+            //collider.setCollisionGroups(0);
+            collider.setActiveHooks(RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS);
         }
+        this.axles[axle.bodyA.reference.handle] = {
+            body2Handle: axle.bodyB.reference.handle,
+            joint: joint as RAPIER.RevoluteImpulseJoint,
+        };
     }
 
     getShapeContent(collider: Rapier.Collider): ShapeContentData | null {
@@ -485,10 +498,6 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
         let gravity = new RAPIER.Vector2(this.gravity.x, this.gravity.y);
         let world = new RAPIER.World(gravity);
         this.world = world;
-
-        this.world.maxVelocityIterations = 4;
-        this.world.maxVelocityFrictionIterations =
-            4 * 2;
     }
 
     /** multiple gon */
@@ -665,6 +674,7 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
     }
 
     eventQueue: RAPIER.EventQueue | null = null;
+    physicsHooks: RAPIER.PhysicsHooks | null = null;
 
     step(): SimuloPhysicsStepInfo {
         if (!this.world) { throw new Error('init world first'); }
@@ -676,8 +686,30 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
         if (!this.eventQueue) {
             this.eventQueue = new RAPIER.EventQueue(true);
         }
+        if (!this.physicsHooks) {
+            this.physicsHooks = {
+                filterContactPair: (
+                    collider1: number,
+                    collider2: number,
+                    body1: number,
+                    body2: number,
+                ): RAPIER.SolverFlags | null => {
+                    // if theres a revolute between them, we dont collide
+                    let axle = this.axles[body1];
+                    if (axle) {
+                        if (axle.body2Handle == body2) {
+                            return RAPIER.SolverFlags.EMPTY;
+                        }
+                    }
+                    return RAPIER.SolverFlags.COMPUTE_IMPULSE;
+                },
+                filterIntersectionPair(collider1, collider2, body1, body2) {
+                    return true;
+                },
+            };
+        }
 
-        this.world.step(this.eventQueue);
+        this.world.step(this.eventQueue, this.physicsHooks!);
 
         let sounds: CollisionSound[] = [];
 
@@ -887,6 +919,9 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
     cross(a: Rapier.Vector2, b: Rapier.Vector2): Rapier.Vector2 {
         return new RAPIER.Vector2(a.x * b.y, -a.y * b.x);
     }
+    crossZV(z: number, v: Rapier.Vector2): Rapier.Vector2 {
+        return new RAPIER.Vector2(-z * v.y, z * v.x);
+    }
 
     /** Convert a world point to a local point */
     getLocalPoint(bodyPosition: RAPIER.Vector2, bodyRotation: number, worldPoint: RAPIER.Vector2) {
@@ -914,7 +949,6 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
         const pointAWorld = this.getWorldPoint(spring.getBodyAPosition(), spring.getBodyARotation(), spring.localAnchorA);
         const pointBWorld = this.getWorldPoint(spring.getBodyBPosition(), spring.getBodyBRotation(), spring.localAnchorB);
 
-        // will be used soon. if these unused consts bother you, consider adding them to the fomula :)
         const velA = spring.getBodyAVelocity();
         const velB = spring.getBodyBVelocity();
 
@@ -924,7 +958,7 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
 
         const direction = this.normalize(springVector);
 
-        // todo: use this
+        // we use this
         /*         // Compute relative velocity of the anchor points, u
         vec2.subtract(u, bodyB.velocity, bodyA.velocity)
         vec2.crossZV(tmp, bodyB.angularVelocity, rj)
@@ -935,14 +969,17 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
         // F = - k * ( x - L ) - D * ( u )
         vec2.scale(f, r_unit, -k * (rlen - l) - d * vec2.dot(u, r_unit)) */
 
-        const forceMagnitudeA = spring.stiffness * (distance - spring.targetLength) - (spring.damping * (this.dot(springVector, velA) / distance));
-        const forceMagnitudeB = -spring.stiffness * (distance - spring.targetLength) - (spring.damping * (this.dot(springVector, velB) / distance));
+        // Compute relative velocity of the anchor points, u
+        const u = this.sub(velB, velA);
+        const rj = this.crossZV(spring.getBodyBAngularVelocity(), spring.localAnchorB);
+        const ri = this.crossZV(spring.getBodyAAngularVelocity(), spring.localAnchorA);
+        const tmp = this.add(u, rj, ri);
+        const f = this.multiply(direction, -spring.stiffness * (distance - spring.targetLength) - spring.damping * this.dot(u, direction));
+        const forceA = this.multiply(f, -1);
+        const forceB = f;
 
-        const forceOnA = this.multiply(direction, forceMagnitudeA);
-        const forceOnB = this.multiply(direction, forceMagnitudeB);
-
-        spring.applyBodyAImpulse(forceOnA, pointAWorld);
-        spring.applyBodyBImpulse(forceOnB, pointBWorld);
+        spring.applyBodyAImpulse(forceA, pointAWorld);
+        spring.applyBodyBImpulse(forceB, pointBWorld);
     }
 
     saveScene(): SavedWorldState {

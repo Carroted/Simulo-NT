@@ -27,7 +27,7 @@ export default class PolygonTool implements PhysicsSandboxTool {
         // make sure its more than 0.1 away
         if (!this.points[player.id] || this.points[player.id].length < 1) return;
         let lastPoint = this.points[player.id][this.points[player.id].length - 1];
-        if (Math.abs(lastPoint.x - player.x) < 1.5 && Math.abs(lastPoint.y - player.y) < 1.5) return;
+        if (Math.abs(lastPoint.x - player.x) < 0.1 && Math.abs(lastPoint.y - player.y) < 0.1) return;
         this.points[player.id].push({ x: player.x, y: player.y });
     }
     playerUp(player: PhysicsSandboxPlayer) {

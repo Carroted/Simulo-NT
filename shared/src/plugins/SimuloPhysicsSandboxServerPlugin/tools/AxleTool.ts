@@ -43,8 +43,8 @@ export default class AxleTool implements PhysicsSandboxTool {
         this.physicsSandbox.physicsPlugin.physicsServer.addAxle({
             bodyA,
             bodyB,
-            localAnchorA: bodyA ? this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyA.translation(), bodyA.rotation(), { x: startPoint.x, y: startPoint.y }) : { x: 0, y: 0 },
-            localAnchorB: bodyB ? this.physicsSandbox.physicsPlugin.physicsServer.getLocalPoint(bodyB.translation(), bodyB.rotation(), { x: startPoint.x, y: startPoint.y }) : { x: 0, y: 0 },
+            localAnchorA: bodyA ? this.physicsSandbox.physicsPlugin.physicsServer.getLocalObjectPoint(bodyA, { x: startPoint.x, y: startPoint.y, z: 0 }) : { x: 0, y: 0, z: 0 },
+            localAnchorB: bodyB ? this.physicsSandbox.physicsPlugin.physicsServer.getLocalObjectPoint(bodyB, { x: startPoint.x, y: startPoint.y, z: 0 }) : { x: 0, y: 0, z: 0 },
         });
 
         this.startPoints[player.id] = null;

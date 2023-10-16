@@ -53,6 +53,15 @@ export default interface SimuloPhysicsServer {
         localAnchorA: { x: number, y: number, z: number };
         localAnchorB: { x: number, y: number, z: number };
     }): any;
+    addSpring(spring: {
+        objectA: SimuloObject | null; // null means world
+        objectB: SimuloObject | null; // null means world
+        stiffness: number;
+        damping: number;
+        restLength: number;
+        localAnchorA: { x: number, y: number, z: number };
+        localAnchorB: { x: number, y: number, z: number };
+    }): any;
 
     /** Responsibly shut down the physics server. */
     destroy(): void;

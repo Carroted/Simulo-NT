@@ -18,7 +18,7 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
     controller: SimuloServerController;
     physicsServer: SimuloPhysicsServer;
     previousStepInfo: SimuloPhysicsStepInfo | null = null;
-    paused = true;
+    paused = false;
 
     constructor(controller: SimuloServerController, backend: "rapier" | "p2") {
         this.controller = controller;
@@ -69,59 +69,82 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
             density: 1,
         });
 
-        this.addPerson([0, 0]);
-
-        /*{
-            // Create Ground.
-            let groundSize = 40.0;
-            let grounds = [
-                { x: 0.0, y: 0.0, hx: groundSize, hy: 0.1 },
-                { x: -groundSize, y: groundSize, hx: 0.1, hy: groundSize },
-                { x: groundSize, y: groundSize, hx: 0.1, hy: groundSize },
-            ];
-
-            grounds.forEach((ground) => {
-                this.physicsServer.addCuboid({
-                    width: ground.hx * 2, height: ground.hy * 2, depth: 1,
-                    color: 0xf3d9b1,
-                    alpha: 1,
-                    border: null,
-                    name: 'joe',
-                    sound: '/assets/sounds/impact.wav',
-                    borderWidth: 1,
-                    borderScaleWithZoom: true,
-                    image: null,
-                    zDepth: 0,
-                    position: { x: ground.x, y: ground.y },
-                    isStatic: true,
-                    friction: 0.5,
-                    restitution: 0,
-                    density: 1,
-                });
+        let addBox = (x: number, y: number) => {
+            this.physicsServer.addCuboid({
+                width: 1, height: 1, depth: 1,
+                color: 0xff5050,
+                alpha: 1,
+                border: 0xff0000,
+                name: 'joe',
+                sound: '/assets/sounds/impact.wav',
+                borderWidth: 1,
+                borderScaleWithZoom: true,
+                image: null,
+                zDepth: 0,
+                position: { x: x, y: y },
+                isStatic: false,
+                friction: 0,
+                restitution: 1,
+                density: 10,
             });
+        };
+        let doIt = (x: number, color: number) => {
+            this.addPerson([x, 10], color);
+            addBox(x + 0.1, 2);
+            this.physicsServer.addCuboid({
+                width: 2, height: 8, depth: 1,
+                color: 0xffa0a0,
+                alpha: 1,
+                border: null,
+                name: 'joe',
+                sound: '/assets/sounds/impact.wav',
+                borderWidth: 1,
+                borderScaleWithZoom: true,
+                image: null,
+                zDepth: 0,
+                position: { x: x + 2, y: -6 },
+                isStatic: true,
+                friction: 0.5,
+                restitution: 0,
+                density: 1,
+            });
+            this.physicsServer.addCuboid({
+                width: 2, height: 8, depth: 1,
+                color: 0xffa0a0,
+                alpha: 1,
+                border: null,
+                name: 'joe',
+                sound: '/assets/sounds/impact.wav',
+                borderWidth: 1,
+                borderScaleWithZoom: true,
+                image: null,
+                zDepth: 0,
+                position: { x: x - 10, y: -6 },
+                isStatic: true,
+                friction: 0.5,
+                restitution: 0,
+                density: 1,
+            });
+        };
+        doIt(-40, 0x99e077);
+        doIt(40, 0xff8045);
+        doIt(0, 0x6380ff);
 
-            // Dynamic cubes.
-            let num = 20;
-            let numy = 50;
-            let rad = 1.0;
 
-            let shift = rad * 2.0 + rad;
-            let centerx = shift * (num / 2);
-            let centery = shift / 2.0;
+        let createTestbed = (offsetX: number, offsetY: number, size: number, cubeFriction: number = 0.5, density: number = 1) => {
+            {
+                // Create Ground.
+                let groundSize = 40.0;
+                let grounds = [
+                    { x: 0.0, y: 0.0, hx: groundSize, hy: 0.1 },
+                    { x: -groundSize, y: groundSize, hx: 0.1, hy: groundSize },
+                    { x: groundSize, y: groundSize, hx: 0.1, hy: groundSize },
+                ];
 
-            let i, j;
-
-            let colors = [0x98c1d9, 0x053c5e, 0x1f7a8c];
-            let colorIndex = 0;
-
-            for (j = 0; j < numy; ++j) {
-                for (i = 0; i < num; ++i) {
-                    let x = i * shift - centerx;
-                    let y = j * shift + centery + 3.0;
-
+                grounds.forEach((ground) => {
                     this.physicsServer.addCuboid({
-                        width: rad * 2, height: rad * 2, depth: 1,
-                        color: colors[colorIndex],
+                        width: ground.hx * 2 * size, height: ground.hy * 2 * size, depth: 1,
+                        color: 0xf3d9b1,
                         alpha: 1,
                         border: null,
                         name: 'joe',
@@ -130,22 +153,61 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
                         borderScaleWithZoom: true,
                         image: null,
                         zDepth: 0,
-                        position: { x: x, y: y },
-                        isStatic: false,
+                        position: { x: (ground.x * size) + offsetX, y: (ground.y * size) + offsetY },
+                        isStatic: true,
                         friction: 0.5,
                         restitution: 0,
                         density: 1,
                     });
+                });
 
-                    colorIndex = (colorIndex + 1) % colors.length;
+                // Dynamic cubes.
+                let num = 20;
+                let numy = 50;
+                let rad = 1.0;
+
+                let shift = rad * 2.0 + rad;
+                let centerx = shift * (num / 2);
+                let centery = shift / 2.0;
+
+                let i, j;
+
+                let colors = [0x98c1d9, 0x053c5e, 0x1f7a8c];
+                let colorIndex = 0;
+
+                for (j = 0; j < numy; ++j) {
+                    for (i = 0; i < num; ++i) {
+                        let x = i * shift - centerx;
+                        let y = j * shift + centery + 3.0;
+
+                        this.physicsServer.addCuboid({
+                            width: rad * 2 * size, height: rad * 2 * size, depth: 1,
+                            color: colors[colorIndex],
+                            alpha: 1,
+                            border: null,
+                            name: 'joe',
+                            sound: '/assets/sounds/impact.wav',
+                            borderWidth: 1,
+                            borderScaleWithZoom: true,
+                            image: null,
+                            zDepth: 0,
+                            position: { x: (x * size) + offsetX, y: (y * size) + offsetY },
+                            isStatic: false,
+                            friction: cubeFriction,
+                            restitution: 0,
+                            density: density,
+                        });
+
+                        colorIndex = (colorIndex + 1) % colors.length;
+                    }
                 }
             }
-        }*/
+        };
     }
     start(): void {
         console.log("start");
     }
-    addPerson(offset: [x: number, y: number], personScale = 0.4) {
+    addPerson(offset: [x: number, y: number], color: number, personScale = 0.4) {
         let personBodyPoints: [x: number, y: number][] = [
             [0.0, 0.64],
             [0.712, 0.499],
@@ -183,8 +245,8 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
             isStatic: false,
             density: 1,
             friction: 0.5,
-            restitution: 0.3,
-            color: 0x99e077,
+            restitution: 0,
+            color: color,
         });
 
         let head = this.physicsServer.addBall({
@@ -201,8 +263,8 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
             isStatic: false,
             density: 1,
             friction: 0.5,
-            restitution: 0.3,
-            color: 0x99e077,
+            restitution: 0,
+            color: color,
             cakeSlice: true,
         });
 
@@ -213,15 +275,15 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
             bodyB: head
         });
 
-        /*let spring = this.addSpring(
-            [0, (3.26 * personScale)],
-            [0, ((1.88 - 3.26) * -personScale)],
-            body,
-            head,
-            20 * personScale,
-            0.005 * personScale,
-            0, 0
-        );*/
+        let spring = this.physicsServer.addSpring({
+            localAnchorA: { x: 0, y: (3.26 * personScale), z: 0 },
+            localAnchorB: { x: 0, y: ((1.88 - 3.26) * -personScale), z: 0 },
+            objectA: body,
+            objectB: head,
+            stiffness: 0.6 * personScale,
+            restLength: 0.005 * personScale,
+            damping: 0.01
+        });
     }
     update(): void {
         if (this.paused) {
