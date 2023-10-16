@@ -1,4 +1,5 @@
-import type { ShapeContentData, ShapeTransformData } from "../../SimuloPhysicsServerP2";
+import ShapeContentData from "../../ShapeContentData";
+import ShapeTransformData from "../../ShapeTransformData";
 
 export default interface OverlayShape {
     content: ShapeContentData,

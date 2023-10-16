@@ -1,3 +1,5 @@
+import SimuloText from "./plugins/SimuloPhysicsSandboxServerPlugin/SimuloText";
+
 export default interface ShapeContentData {
     id: string;
     name: string;
@@ -8,6 +10,15 @@ export default interface ShapeContentData {
     alpha: number;
     border: number | null;
     borderWidth: number | null;
+    borderScaleWithZoom: boolean;
+    borderAlpha: number | null;
+    image: string | null;
+    imageTransformations: {
+        translate: { x: number, y: number };
+        scale: number;
+        rotate: number;
+    } | null;
+    text: SimuloText | null;
 }
 
 interface Polygon extends ShapeContentData {

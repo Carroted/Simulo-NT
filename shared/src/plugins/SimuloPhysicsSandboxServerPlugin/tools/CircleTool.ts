@@ -48,7 +48,7 @@ export default class CircleTool implements PhysicsSandboxTool {
             isStatic: false,
             density: 1,
             friction: 0.5,
-            restitution: 0.8,
+            restitution: 0.3,
             position: { x: (startPoint.x + player.x) / 2, y: (startPoint.y + player.y) / 2 },
             cakeSlice: true,
         });
@@ -72,7 +72,12 @@ export default class CircleTool implements PhysicsSandboxTool {
                     borderWidth: 0.1,
                     cakeSlice: true,
                     name: "Circle",
-                    description: null
+                    description: null,
+                    borderScaleWithZoom: true,
+                    borderAlpha: 1,
+                    image: null,
+                    imageTransformations: null,
+                    text: null,
                 } as Ball,
                 transform: {
                     x: (startPoint.x + player.x) / 2,

@@ -38,7 +38,7 @@ export default class PolygonTool implements PhysicsSandboxTool {
             points,
             color: this.color ?? 0xffffff,
             alpha: 1,
-            name: "Rectangle",
+            name: "Polygon",
             border: null,
             borderScaleWithZoom: true,
             borderWidth: 0.1,
@@ -48,7 +48,7 @@ export default class PolygonTool implements PhysicsSandboxTool {
             isStatic: false,
             density: 1,
             friction: 0.5,
-            restitution: 0.8,
+            restitution: 0.3,
             position: { x: 0, y: 0 }, // since points are world space, we need to set the position to 0,0. soon we will switch this up and subtract stuff so its better lol
         });
         this.points[player.id] = [];
@@ -70,7 +70,12 @@ export default class PolygonTool implements PhysicsSandboxTool {
                 id: "polygonToolOverlay",
                 borderWidth: 0.1,
                 name: "Polygon",
-                description: null
+                description: null,
+                borderScaleWithZoom: true,
+                borderAlpha: 1,
+                image: null,
+                imageTransformations: null,
+                text: null,
             } as Polygon,
             transform: {
                 x: 0,

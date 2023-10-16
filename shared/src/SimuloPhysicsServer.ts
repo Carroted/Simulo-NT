@@ -41,12 +41,18 @@ export default interface SimuloPhysicsServer {
         localAnchorB: { x: number, y: number, z: number };
     }): SimuloSpring;
     removeSpring(spring: SimuloSpring): void;
-    getLocalPoint(object: SimuloObject, worldPoint: { x: number, y: number, z: number }): { x: number, y: number, z: number };
-    getWorldPoint(object: SimuloObject, localPoint: { x: number, y: number, z: number }): { x: number, y: number, z: number };
+    getLocalObjectPoint(object: SimuloObject, worldPoint: { x: number, y: number, z: number }): { x: number, y: number, z: number };
+    getWorldObjectPoint(object: SimuloObject, localPoint: { x: number, y: number, z: number }): { x: number, y: number, z: number };
     getObjectData(object: SimuloObject): SimuloObjectData | null;
     getObjectByID(id: string): SimuloObject | null;
     saveScene(): SavedWorldState;
     getSimuloObject(reference: any): SimuloObject | null;
+    addAxle(axle: {
+        bodyA: SimuloObject;
+        bodyB: SimuloObject;
+        localAnchorA: { x: number, y: number, z: number };
+        localAnchorB: { x: number, y: number, z: number };
+    }): any;
 
     /** Responsibly shut down the physics server. */
     destroy(): void;

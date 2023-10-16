@@ -6,6 +6,7 @@ import ShapeContentData from "../../../shared/src/ShapeContentData";
 import ShapeTransformData from "../../../shared/src/ShapeTransformData";
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
 import { SmoothGraphics, LINE_SCALE_MODE, settings } from '@pixi/graphics-smooth';
+import SimuloViewer from "../SimuloViewer";
 
 PIXI.curves.adaptive = false;
 
@@ -15,7 +16,7 @@ interface GFX {
 }
 /** Renderer in PIXI.js for Simulo. You can add shapes with `addShape`, and update their positions with `update`. */
 
-export default class SimuloViewerPIXI {
+export default class SimuloViewerPIXI implements SimuloViewer {
     coll2gfx: Map<string, GFX>;
     renderer: PIXI.Renderer;
     scene: PIXI.Container;

@@ -18,7 +18,7 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
     controller: SimuloServerController;
     physicsServer: SimuloPhysicsServer;
     previousStepInfo: SimuloPhysicsStepInfo | null = null;
-    paused = false;
+    paused = true;
 
     constructor(controller: SimuloServerController, backend: "rapier" | "p2") {
         this.controller = controller;
@@ -65,11 +65,13 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
             position: { x: 0, y: -510 },
             isStatic: true,
             friction: 0.5,
-            restitution: 0.5,
+            restitution: 0.3,
             density: 1,
         });
 
-        {
+        this.addPerson([0, 0]);
+
+        /*{
             // Create Ground.
             let groundSize = 40.0;
             let grounds = [
@@ -138,10 +140,88 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
                     colorIndex = (colorIndex + 1) % colors.length;
                 }
             }
-        }
+        }*/
     }
     start(): void {
         console.log("start");
+    }
+    addPerson(offset: [x: number, y: number], personScale = 0.4) {
+        let personBodyPoints: [x: number, y: number][] = [
+            [0.0, 0.64],
+            [0.712, 0.499],
+            [1.19, 0.172],
+            [1.504, -0.27],
+            [1.67, -0.779],
+            [1.678, -3.272],
+            [1.643, -3.469],
+            [1.451, -3.597],
+            [-1.416, -3.589],
+            [-1.582, -3.51],
+            [-1.654, -3.35],
+            [-1.67, -0.779],
+            [-1.497, -0.305],
+            [-1.231, 0.126],
+            [-0.65, 0.517],
+            [-0.328, 0.614],
+        ];
+
+        personBodyPoints = personBodyPoints.map(function (point) {
+            return [point[0] * personScale, point[1] * personScale];
+        });
+
+        let body = this.physicsServer.addPolygon({
+            points: personBodyPoints.map(point => { return { x: point[0], y: point[1] } }),
+            position: { x: offset[0], y: offset[1] },
+            alpha: 1,
+            name: "Polygon",
+            border: null,
+            borderScaleWithZoom: true,
+            borderWidth: 0.1,
+            image: null,
+            sound: "/assets/sounds/impact.wav",
+            zDepth: 0,
+            isStatic: false,
+            density: 1,
+            friction: 0.5,
+            restitution: 0.3,
+            color: 0x99e077,
+        });
+
+        let head = this.physicsServer.addBall({
+            radius: 1.71 * personScale,
+            position: { x: offset[0], y: offset[1] + (1.88 * personScale) },
+            alpha: 1,
+            name: "some kind of Object",
+            border: null,
+            borderScaleWithZoom: true,
+            borderWidth: 0.1,
+            image: null,
+            sound: "/assets/sounds/impact.wav",
+            zDepth: 0,
+            isStatic: false,
+            density: 1,
+            friction: 0.5,
+            restitution: 0.3,
+            color: 0x99e077,
+            cakeSlice: true,
+        });
+
+        let axle = this.physicsServer.addAxle({
+            localAnchorA: { x: 0, y: (0.32 * personScale), z: 0 },
+            localAnchorB: { x: 0, y: ((1.88 - 0.32) * -personScale), z: 0 },
+            bodyA: body,
+            bodyB: head
+        });
+
+        /*let spring = this.addSpring(
+            [0, (3.26 * personScale)],
+            [0, ((1.88 - 3.26) * -personScale)],
+            body,
+            head,
+            20 * personScale,
+            0.005 * personScale,
+            0, 0
+        );*/
     }
     update(): void {
         if (this.paused) {

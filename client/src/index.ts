@@ -18,7 +18,7 @@ server.handleIncomingEvent("connect", {
 }, "local");
 
 let client = new SimuloClientController();
-let physicsSandboxClientPlugin = new SimuloPhysicsSandboxClientPlugin(client);
+let physicsSandboxClientPlugin = new SimuloPhysicsSandboxClientPlugin(client, "pixi");
 
 client.addPlugin(physicsSandboxClientPlugin);
 

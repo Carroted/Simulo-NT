@@ -1,12 +1,12 @@
 import ShapeContentData from "../../ShapeContentData";
 import SimuloPhysicsStepInfo from "../../SimuloPhysicsStepInfo";
 import type OverlayShape from "./OverlayShape";
-import type OverlayText from "./OverlayText";
+import type SimuloText from "./SimuloText";
 
 export default interface WorldUpdate extends SimuloPhysicsStepInfo {
     overlays: {
         shapes: OverlayShape[],
-        texts: OverlayText[]
+        texts: SimuloText[]
     }
     selectedObjects: { [id: string]: ShapeContentData[] }
 };

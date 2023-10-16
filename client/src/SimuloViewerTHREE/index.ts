@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-import type { Ball, Polygon, Cuboid, ShapeContentData, ShapeTransformData } from "../../../shared/src/SimuloPhysicsServerP2";
+import ShapeContentData, { Ball, Cuboid, Polygon } from '../../../shared/src/ShapeContentData';
+import ShapeTransformData from '../../../shared/src/ShapeTransformData';
 import type WorldUpdate from "../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
+import SimuloViewer from '../SimuloViewer';
 
 /** Renderer in THREE.js for Simulo.
  * 
  * Can be used for both 2.5D (renders 2D scenes without requiring any additional setup) and regular 3D. */
 
-export default class SimuloViewerTHREE {
+export default class SimuloViewerTHREE implements SimuloViewer {
     canvas: HTMLCanvasElement;
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;

@@ -1,8 +1,10 @@
-import type SimuloClientPlugin from "../../SimuloClientPlugin";
-import type SimuloClientController from "../../SimuloClientController";
-import SimuloViewerPIXI from "../../SimuloViewerPIXI";
-import SimuloViewerTHREE from "../../SimuloViewerTHREE";
-import type WorldUpdate from "../../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
+import type SimuloClientPlugin from "../../../SimuloClientPlugin";
+import type SimuloClientController from "../../../SimuloClientController";
+import SimuloViewerPIXI from "../../../SimuloViewerPIXI";
+import SimuloViewerTHREE from "../../../SimuloViewerTHREE";
+import type WorldUpdate from "../../../../../shared/src/plugins/SimuloPhysicsSandboxServerPlugin/WorldUpdate";
+import type SimuloViewer from "../../../SimuloViewer";
+import SimuloViewerCanvas from "../../../SimuloViewerCanvas";
 
 /** This will manage tools and UI for Physics Sandbox client-side */
 
@@ -15,7 +17,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
     id = "simulo-physics-sandbox-client-plugin";
     dependencies = [];
     controller: SimuloClientController;
-    viewer: SimuloViewerPIXI;
+    viewer: SimuloViewer;
 
     cachedImages: { [url: string]: any } = {}; // can store string for svg for example, or something else for rasters
 
@@ -60,11 +62,24 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         this.controller.emit('set_paused', !this.paused);
     }
 
-    constructor(controller: SimuloClientController) {
+    constructor(controller: SimuloClientController, viewer: 'pixi' | 'three' | 'canvas') {
         this.controller = controller;
         // this.viewer = new SimuloViewerTHREE();
 
-        this.viewer = new SimuloViewerPIXI();
+        if (viewer === 'pixi') {
+            this.viewer = new SimuloViewerPIXI();
+        }
+        else if (viewer === 'canvas') {
+            let canvas = document.createElement('canvas');
+            this.viewer = new SimuloViewerCanvas(canvas);
+        }
+        else if (viewer === 'three') {
+            this.viewer = new SimuloViewerTHREE() as any;
+        }
+        else {
+            let canvas = document.createElement('canvas');
+            this.viewer = new SimuloViewerCanvas(canvas);
+        }
 
         // listen to viewer events and emit them to the server in Physics Sandbox format
 

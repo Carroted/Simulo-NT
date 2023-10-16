@@ -32,7 +32,7 @@ export default class DragTool implements PhysicsSandboxTool {
             this.springs[player.id] = this.physicsSandbox.physicsPlugin.physicsServer.addSpring({
                 objectA: bodyA,
                 objectB: null,
-                stiffness: 5,
+                stiffness: 0.5,
                 localAnchorA: this.physicsSandbox.physicsPlugin.physicsServer.getLocalObjectPoint(bodyA, { x: player.x, y: player.y, z: 0 }),
                 localAnchorB: { x: player.x, y: player.y, z: 0 },
                 damping: 0.1,

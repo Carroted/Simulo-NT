@@ -360,24 +360,24 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
     }
 
     addAxle(axle: {
-        bodyA: Rapier.RigidBody;
-        bodyB: Rapier.RigidBody;
-        localAnchorA: Rapier.Vector2;
-        localAnchorB: Rapier.Vector2;
+        bodyA: SimuloObject;
+        bodyB: SimuloObject;
+        localAnchorA: { x: number, y: number, z: number };
+        localAnchorB: { x: number, y: number, z: number };
     }) {
         if (!this.world) { throw new Error('init world first'); }
 
         let params = RAPIER.JointData.revolute(axle.localAnchorA, axle.localAnchorB);
-        let joint = this.world.createImpulseJoint(params, axle.bodyA, axle.bodyB, true);
+        let joint = this.world.createImpulseJoint(params, axle.bodyA.reference, axle.bodyB.reference, true);
         // all of each bodys collider collision groups need to be adjusted
-        let colliderACount = axle.bodyA.numColliders();
-        let colliderBCount = axle.bodyB.numColliders();
+        let colliderACount = axle.bodyA.reference.numColliders();
+        let colliderBCount = axle.bodyB.reference.numColliders();
         for (let i = 0; i < colliderACount; i++) {
-            let collider = axle.bodyA.collider(i);
-            collider.setCollisionGroups(0);
+            let collider = axle.bodyA.reference.collider(i);
+            //collider.setCollisionGroups(0);
         }
         for (let i = 0; i < colliderBCount; i++) {
-            let collider = axle.bodyB.collider(i);
+            let collider = axle.bodyB.reference.collider(i);
             collider.setCollisionGroups(0);
         }
     }
@@ -398,7 +398,12 @@ class SimuloPhysicsServerRapier implements SimuloPhysicsServer {
             id: bodyData.id,
             borderWidth: bodyData.borderWidth,
             name: bodyData.name ?? "Some kind of object",
-            description: null
+            description: null,
+            image: bodyData.image,
+            imageTransformations: null,
+            borderAlpha: 0.5,
+            borderScaleWithZoom: bodyData.borderScaleWithZoom,
+            text: null
         };
 
         switch (shape.type) {

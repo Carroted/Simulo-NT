@@ -72,7 +72,7 @@ export default class RectangleTool implements PhysicsSandboxTool {
             isStatic: false,
             density: 1,
             friction: 0.5,
-            restitution: 0.8,
+            restitution: 0.3,
             position: { x: (startPoint.x + player.x) / 2, y: (startPoint.y + player.y) / 2 },
         });
         this.startPoints[player.id] = null;
@@ -96,7 +96,12 @@ export default class RectangleTool implements PhysicsSandboxTool {
                     id: "rectangleToolOverlay",
                     borderWidth: 0.1,
                     name: "Rectangle",
-                    description: null
+                    description: null,
+                    borderScaleWithZoom: true,
+                    borderAlpha: 1,
+                    image: null,
+                    imageTransformations: null,
+                    text: null,
                 } as Cuboid,
                 transform: {
                     x: (startPoint.x + player.x) / 2,

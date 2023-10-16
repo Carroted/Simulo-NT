@@ -8,7 +8,7 @@ import ShapeContentData from "../../ShapeContentData";
 
 import type WorldUpdate from "./WorldUpdate";
 import type OverlayShape from "./OverlayShape";
-import type OverlayText from "./OverlayText";
+import type SimuloText from "./SimuloText";
 import RectangleTool from "./tools/RectangleTool";
 import CircleTool from "./tools/CircleTool";
 import SpringTool from "./tools/SpringTool";
@@ -36,7 +36,11 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
         "select_move": new SelectMoveTool(this),
         "drag": new DragTool(this),
         "rotate": null,
-        "resize": null,
+        "resize": {
+            name: "Resize",
+            icon: "icons/arrow-top-left-bottom-right-bold.svg",
+            description: "Resize objects",
+        } as PhysicsSandboxTool,
     }, {
         "brush": null,
         "eraser": null,
@@ -102,7 +106,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
     /** Overlays are cleared each frame, and sent alongside each `world_update`. */
     overlayShapes: OverlayShape[] = [];
     /** Overlays are cleared each frame, and sent alongside each `world_update`. */
-    overlayTexts: OverlayText[] = [];
+    overlayTexts: SimuloText[] = [];
 
     /** Physics Sandbox supports server-side rendering overlays each frame. This can be used for tools.
      * 
@@ -124,7 +128,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
      * For instance, when dragging an object, we can show the drag force.
      * 
      * Overlays are sent alongside each `world_update` event. */
-    addOverlayText(text: OverlayText) {
+    addOverlayText(text: SimuloText) {
         let length = this.overlayTexts.push(text);
         // return index of text
         return length - 1;
