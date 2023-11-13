@@ -16,6 +16,7 @@ import SavedWorldState from "../SavedWorldState";
 import SimuloSpring from "../SimuloSpring";
 
 class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
+    type: "2d" | "3d" = "2d";
     world: p2.World;
     changedContents: {
         [id: string]: ShapeContentData;
@@ -167,7 +168,12 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
             border: null,
             borderWidth: null,
             name: objectData ? (objectData.name ?? "Some kind of object") : "Some kind of object",
-            description: null
+            description: null,
+            borderAlpha: 1,
+            borderScaleWithZoom: false,
+            image: null,
+            imageTransformations: null,
+            text: null,
         };
         if (shape instanceof p2.Box) {
             let rect: Cuboid = {
@@ -330,7 +336,9 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
         localAnchorA: { x: number, y: number, z: number };
         localAnchorB: { x: number, y: number, z: number };
     }) {
-        let constraint = new p2.LinearSpring(spring.objectA?.reference, spring.objectB?.reference, {
+        let groundBody = new p2.Body();
+        this.world.addBody(groundBody);
+        let constraint = new p2.LinearSpring(spring.objectA?.reference, spring.objectB?.reference ?? groundBody, {
             stiffness: spring.stiffness,
             damping: spring.damping,
             restLength: spring.restLength,
@@ -405,6 +413,28 @@ class SimuloPhysicsServerP2 implements SimuloPhysicsServer {
             y: out[1],
             z: 0
         };
+    }
+
+    addAxle(axle: { bodyA: SimuloObject; bodyB: SimuloObject; localAnchorA: { x: number; y: number; z: number; }; localAnchorB: { x: number; y: number; z: number; }; }) {
+        let constraint = new p2.RevoluteConstraint(axle.bodyA.reference as p2.Body, axle.bodyB.reference as p2.Body, {
+            localPivotA: [axle.localAnchorA.x, axle.localAnchorA.y],
+            localPivotB: [axle.localAnchorB.x, axle.localAnchorB.y],
+            collideConnected: false
+        });
+        this.world.addConstraint(constraint);
+        return {
+            destroy: () => {
+                this.world.removeConstraint(constraint);
+            },
+            reference: constraint,
+            setLocalAnchorA: (anchor: { x: number, y: number, z: number }) => {
+                constraint.pivotA = [anchor.x, anchor.y];
+            },
+            setLocalAnchorB: (anchor: { x: number, y: number, z: number }) => {
+                constraint.pivotB = [anchor.x, anchor.y];
+            },
+        };
+
     }
 }
 

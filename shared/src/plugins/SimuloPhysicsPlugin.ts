@@ -1,11 +1,11 @@
 import type SimuloServerPlugin from "../SimuloServerPlugin";
 import type SimuloServerController from "../SimuloServerController";
-import SimuloPhysicsServerRapier from "../SimuloPhysicsServerRapier";
+import SimuloPhysicsServerRapier2D from "../SimuloPhysicsServerRapier2D";
 import type SimuloPhysicsStepInfo from "../SimuloPhysicsStepInfo";
 import type SimuloPhysicsServer from "../SimuloPhysicsServer";
 import SimuloPhysicsServerP2 from "../SimuloPhysicsServerP2";
 
-/** SimuloPhysicsServerRapier as a plugin, which is a rapier physics wrapper that also adds springs */
+/** SimuloPhysicsServerRapier2D as a plugin, which is a rapier physics wrapper that also adds springs */
 
 export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
     name = "Simulo Physics Plugin";
@@ -23,14 +23,14 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
     constructor(controller: SimuloServerController, backend: "rapier" | "p2") {
         this.controller = controller;
         if (backend === "rapier") {
-            this.physicsServer = new SimuloPhysicsServerRapier();
+            this.physicsServer = new SimuloPhysicsServerRapier2D();
         }
         else if (backend === "p2") {
             this.physicsServer = new SimuloPhysicsServerP2();
         }
         else {
             console.log('No physics backend specified, defaulting to rapier'); // its better to default to an engine than to throw error since that would crash the entire server
-            this.physicsServer = new SimuloPhysicsServerRapier();
+            this.physicsServer = new SimuloPhysicsServerRapier2D();
         }
     }
 
@@ -38,7 +38,7 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
         this.physicsServer.destroy();
 
         if (backend === "rapier") {
-            this.physicsServer = new SimuloPhysicsServerRapier();
+            this.physicsServer = new SimuloPhysicsServerRapier2D();
         } else if (backend === "p2") {
             this.physicsServer = new SimuloPhysicsServerP2();
         }
@@ -46,7 +46,7 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
     }
 
     async init() {
-        if (this.physicsServer instanceof SimuloPhysicsServerRapier) {
+        if (this.physicsServer instanceof SimuloPhysicsServerRapier2D) {
             await this.physicsServer.init();
         }
         let groundPlane = this.physicsServer.addCuboid({
@@ -231,7 +231,7 @@ export default class SimuloPhysicsPlugin implements SimuloServerPlugin {
             return [point[0] * personScale, point[1] * personScale];
         });
 
-        let body = this.physicsServer.addPolygon({
+        let body = this.physicsServer.addPolygon!({
             points: personBodyPoints.map(point => { return { x: point[0], y: point[1] } }),
             position: { x: offset[0], y: offset[1] },
             alpha: 1,

@@ -5,11 +5,51 @@ import type SimuloObjectData from "../../../SimuloObjectData";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
 import SimuloObject from "../../../SimuloObject";
 import SimuloSpring from "../../../SimuloSpring";
+import PhysicsSandboxToolSettings from "../PhysicsSandboxToolSettings";
 
 export default class DragTool implements PhysicsSandboxTool {
     name = "Drag";
     description = "Drag physics objects with a spring";
     icon = "icons/cursor-default.svg";
+    settings: PhysicsSandboxToolSettings = [
+        {
+            id: "showForce",
+            label: "Show Force",
+            value: false,
+            type: "checkbox",
+        },
+        {
+            id: "showSpring",
+            label: "Show Spring",
+            value: false,
+            type: "checkbox",
+        },
+        {
+            id: "dragCenterOfMass",
+            label: "Drag Center of Mass",
+            value: false,
+            type: "checkbox",
+        },
+        // strength and max force
+        {
+            id: "strength",
+            label: "Strength",
+            value: 0.5,
+            type: "slider",
+            min: 0,
+            max: 1,
+            step: 0.01,
+        },
+        {
+            id: "maxForce",
+            label: "Max Force",
+            value: 10,
+            type: "slider",
+            min: 0,
+            max: 100,
+            step: 0.01,
+        }
+    ];
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 

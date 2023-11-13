@@ -92,12 +92,13 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
         // if player moved less than x units, update selection
         let distance = Math.sqrt(Math.pow(startPoint.x - player.x, 2) + Math.pow(startPoint.y - player.y, 2));
         if (distance < 0.3) {
+            return false;
             let target = this.physicsPlugin.physicsServer.getObjectAtPoint({
                 x: player.x,
                 y: player.y,
                 z: 0
             });
-            this.players[player.id].selectedObjects = target ? [target] : [];
+            this.players[player.id].selectedObjects = target ? [target!] : [];
             return true;
         }
         return false;
@@ -257,7 +258,7 @@ export default class SimuloPhysicsSandboxServerPlugin implements SimuloServerPlu
 
         if (event === 'load') {
             /*this.physicsPlugin.physicsServer.world = null;
-            this.physicsPlugin.physicsServer = new SimuloPhysicsServerRapier();
+            this.physicsPlugin.physicsServer = new SimuloPhysicsServerRapier2D();
             await this.physicsPlugin.physicsServer.initFromSaved(JSON.parse(localStorage.getItem('what the fu')!));*/
         }
 

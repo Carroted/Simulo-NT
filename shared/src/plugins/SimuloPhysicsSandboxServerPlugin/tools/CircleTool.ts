@@ -5,11 +5,13 @@ import { Ball } from "../../../ShapeContentData";
 
 import randomColor from "../../../randomColor";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
+import PhysicsSandboxToolSettings from "../PhysicsSandboxToolSettings";
 
 export default class CircleTool implements PhysicsSandboxTool {
     name = "Circle";
     description = "Draw circles";
     icon = "icons/circle.svg";
+    settings: PhysicsSandboxToolSettings = [];
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 

@@ -4,11 +4,13 @@ import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 import type SimuloObjectData from "../../../SimuloObjectData";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
+import PhysicsSandboxToolSettings from "../PhysicsSandboxToolSettings";
 
 export default class SpringTool implements PhysicsSandboxTool {
     name = "Spring";
     description = "Draw springs, real";
     icon = "icons/spring.svg";
+    settings: PhysicsSandboxToolSettings = [];
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 

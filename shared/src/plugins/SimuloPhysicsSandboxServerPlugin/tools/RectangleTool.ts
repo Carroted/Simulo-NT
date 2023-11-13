@@ -5,11 +5,13 @@ import type { Cuboid } from "../../../ShapeContentData";
 
 import randomColor from "../../../randomColor";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
+import PhysicsSandboxToolSettings from "../PhysicsSandboxToolSettings";
 
 export default class RectangleTool implements PhysicsSandboxTool {
     name = "Rectangle";
     description = "Draw rectangles";
     icon = "icons/square.svg";
+    settings: PhysicsSandboxToolSettings = [];
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 

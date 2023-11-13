@@ -1,5 +1,6 @@
 import type SimuloPhysicsSandboxServerPlugin from ".";
 import type PhysicsSandboxPlayerExtended from "./PhysicsSandboxPlayerExtended";
+import PhysicsSandboxToolSettings from "./PhysicsSandboxToolSettings";
 
 export default interface PhysicsSandboxTool {
     name: string;
@@ -7,6 +8,7 @@ export default interface PhysicsSandboxTool {
     icon: string;
     /** Ask for this in constructor. */
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
+    settings: PhysicsSandboxToolSettings;
     /** When player presses down primary input with this tool selected */
     playerDown(player: PhysicsSandboxPlayerExtended): void;
     /** When player moves with this tool selected, regardless of primary input. You should usually check if player.down is true before doing anything. */

@@ -1,6 +1,6 @@
 import CollisionSound from "./CollisionSound";
 import ShapeContentData from "./ShapeContentData";
-import { ShapeTransformData } from "./SimuloPhysicsServerRapier";
+import { ShapeTransformData } from "./SimuloPhysicsServerRapier2D";
 import SimuloSpringInfo from "./SimuloSpringInfo";
 
 export default interface SimuloPhysicsStepInfo {

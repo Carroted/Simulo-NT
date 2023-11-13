@@ -53,6 +53,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
 
     utilityBar: HTMLDivElement;
     toolBar: HTMLDivElement;
+    toolSettings: HTMLDivElement;
     menuBar: HTMLDivElement;
     paused: boolean = false; // DONT set directly, this is updated when the server tells us it paused or whatever
     pausedIndicator: HTMLDivElement;
@@ -72,6 +73,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         else if (viewer === 'canvas') {
             let canvas = document.createElement('canvas');
             this.viewer = new SimuloViewerCanvas(canvas);
+            document.body.appendChild(canvas);
         }
         else if (viewer === 'three') {
             this.viewer = new SimuloViewerTHREE() as any;
@@ -79,6 +81,7 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         else {
             let canvas = document.createElement('canvas');
             this.viewer = new SimuloViewerCanvas(canvas);
+            document.body.appendChild(canvas);
         }
 
         // listen to viewer events and emit them to the server in Physics Sandbox format
@@ -130,6 +133,11 @@ export default class SimuloPhysicsSandboxClientPlugin implements SimuloClientPlu
         let utilityBar = document.createElement('div');
         utilityBar.className = 'panel bar utilities';
         utilityBar.style.display = 'none';
+
+        let toolSettings = document.createElement('div');
+        toolSettings.className = 'panel bar tool-settings';
+        toolSettings.style.display = 'none';
+        this.toolSettings = document.body.appendChild(toolSettings);
 
         let people = document.createElement('div');
         people.className = 'people item';

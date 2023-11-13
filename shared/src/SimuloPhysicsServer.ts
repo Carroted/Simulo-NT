@@ -9,12 +9,13 @@ import SimuloPhysicsStepInfo from "./SimuloPhysicsStepInfo";
 import SimuloSpring from "./SimuloSpring";
 
 export default interface SimuloPhysicsServer {
+    type: "2d" | "3d";
     /** Steps the world, then returns step from `getStepInfo`. */
     step(): SimuloPhysicsStepInfo;
     getStepInfo(sounds: CollisionSound[], before: number): SimuloPhysicsStepInfo;
     getShapeTransforms(): { [id: string]: ShapeTransformData };
     destroyObject(object: SimuloObject): void;
-    addPolygon(polygon: BaseShapeData & {
+    addPolygon?(polygon: BaseShapeData & {
         points: { x: number, y: number }[];
     }): SimuloObject;
     getShapeContent(reference: any): ShapeContentData | null;

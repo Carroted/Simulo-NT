@@ -4,11 +4,13 @@ import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 
 import randomColor from "../../../randomColor";
 import { Polygon } from "../../../ShapeContentData";
+import PhysicsSandboxToolSettings from "../PhysicsSandboxToolSettings";
 
 export default class PolygonTool implements PhysicsSandboxTool {
     name = "Polygon";
     description = "Draw polygons";
     icon = "icons/polygon.svg";
+    settings: PhysicsSandboxToolSettings = [];
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 
@@ -34,7 +36,7 @@ export default class PolygonTool implements PhysicsSandboxTool {
         let points = this.points[player.id];
         if (!points || points.length < 3) return;
 
-        this.physicsSandbox.physicsPlugin.physicsServer.addPolygon({
+        this.physicsSandbox.physicsPlugin.physicsServer.addPolygon!({
             points,
             color: this.color ?? 0xffffff,
             alpha: 1,

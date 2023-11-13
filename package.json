@@ -4,6 +4,7 @@
   "version": "0.9.0-alpha",
   "dependencies": {
     "@dimforge/rapier2d-compat": "^0.11.2",
+    "@dimforge/rapier3d-compat": "^0.11.2",
     "@mdi/svg": "^7.2.96",
     "@pixi/filter-outline": "^5.2.0",
     "@pixi/graphics-smooth": "^1.1.0",

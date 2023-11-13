@@ -192,6 +192,7 @@ export default class SimuloViewerTHREE implements SimuloViewer {
                 break;
             case "polygon":
                 // comng soono!2
+                mesh = new THREE.Object3D();
                 break;
             case "cuboid":
                 let cuboid = content as Cuboid;

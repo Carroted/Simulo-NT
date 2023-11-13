@@ -4,11 +4,13 @@ import type SimuloPhysicsSandboxServerPlugin from "..";
 import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 import type SimuloObjectData from "../../../SimuloObjectData";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
+import PhysicsSandboxToolSettings from "../PhysicsSandboxToolSettings";
 
 export default class AxleTool implements PhysicsSandboxTool {
     name = "Axle";
     description = "Draw axles, also known as hinges, swivels and pivots";
     icon = "icons/axle.svg";
+    settings: PhysicsSandboxToolSettings = [];
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 

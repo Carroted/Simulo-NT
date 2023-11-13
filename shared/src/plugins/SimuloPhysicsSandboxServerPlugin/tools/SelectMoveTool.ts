@@ -5,11 +5,13 @@ import type PhysicsSandboxPlayer from "../PhysicsSandboxPlayer";
 import { Cuboid } from "../../../ShapeContentData";
 import PhysicsSandboxPlayerExtended from "../PhysicsSandboxPlayerExtended";
 import SimuloObject from "../../../SimuloObject";
+import PhysicsSandboxToolSettings from "../PhysicsSandboxToolSettings";
 
 export default class SelectMoveTool implements PhysicsSandboxTool {
     name = "Select and Move";
     description = "Box select and/or move";
     icon = "icons/cursor-move.svg";
+    settings: PhysicsSandboxToolSettings = [];
 
     physicsSandbox: SimuloPhysicsSandboxServerPlugin;
 
